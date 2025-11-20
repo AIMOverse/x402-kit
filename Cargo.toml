@@ -1,14 +1,3 @@
-[package]
-name = "x402-kit"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-alloy-primitives = { version = "1" }
-bon = { version = "3" }
-crypto-bigint = { version = "0.6", features = ["serde"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = { version = "1.0" }
-thiserror = { version = "2" }
-url = { version = "2" }
-solana-sdk = { version = "3" }
+[workspace]
+resolver = "3"
+members = ["crates/x402-kit"]
