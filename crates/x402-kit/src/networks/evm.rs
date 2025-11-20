@@ -3,7 +3,9 @@ use std::{
     str::FromStr,
 };
 
-use crate::concepts::{Address, Asset, NetworkFamily};
+use serde::{Deserialize, Serialize};
+
+use crate::concepts::{Address, Asset, NetworkFamily, Signature};
 
 #[derive(Debug, Clone, Copy)]
 pub struct EvmNetwork {
@@ -47,7 +49,73 @@ impl Debug for EvmAddress {
     }
 }
 
+impl Serialize for EvmAddress {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for EvmAddress {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        EvmAddress::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
 impl Address for EvmAddress {
+    type Network = EvmNetwork;
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct EvmSignature(pub alloy_primitives::Signature);
+
+impl Display for EvmSignature {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.to_string())
+    }
+}
+
+impl Debug for EvmSignature {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "EvmSignature({})", self.0)
+    }
+}
+
+impl FromStr for EvmSignature {
+    type Err = alloy_primitives::SignatureError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let sig = alloy_primitives::Signature::from_str(s)?;
+        Ok(EvmSignature(sig))
+    }
+}
+
+impl Serialize for EvmSignature {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for EvmSignature {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        EvmSignature::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
+impl Signature for EvmSignature {
     type Network = EvmNetwork;
 }
 

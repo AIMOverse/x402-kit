@@ -12,3 +12,5 @@ serde_json = { version = "1.0" }
 thiserror = { version = "2" }
 url = { version = "2" }
 solana-sdk = { version = "3" }
+chrono = { version = "0.4", default-features = false, features = ["std"] }
+hex = "0.4.3"
