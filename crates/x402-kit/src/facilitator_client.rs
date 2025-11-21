@@ -9,6 +9,15 @@ pub struct RemoteFacilitatorClient {
     pub client: reqwest::Client,
 }
 
+impl RemoteFacilitatorClient {
+    pub fn new(base_url: Url) -> Self {
+        RemoteFacilitatorClient {
+            base_url,
+            client: reqwest::Client::new(),
+        }
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum RemoteFacilitatorClientError {
     #[error("URL parse error: {0}")]
