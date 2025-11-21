@@ -133,23 +133,19 @@ pub mod assets {
 
     use super::*;
 
-    pub fn usdc(network: &SvmNetwork) -> Option<SvmAsset> {
-        fn create_usdc(pubkey: Pubkey) -> SvmAsset {
+    macro_rules! create_usdc {
+        ($addr:expr) => {
             SvmAsset {
-                address: SvmAddress(pubkey),
+                address: SvmAddress($addr),
                 decimals: 6,
                 name: "USD Coin",
                 symbol: "USDC",
             }
-        }
-        match network.0 {
-            "solana" => Some(create_usdc(pubkey!(
-                "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
-            ))),
-            "solana-devnet" => Some(create_usdc(pubkey!(
-                "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
-            ))),
-            _ => None,
-        }
+        };
     }
+
+    pub const USDC_SOLANA: SvmAsset =
+        create_usdc!(pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"));
+    pub const USDC_SOLANA_DEVNET: SvmAsset =
+        create_usdc!(pubkey!("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"));
 }

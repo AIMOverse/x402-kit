@@ -154,30 +154,23 @@ pub mod assets {
         symbol: "ETH",
     };
 
-    pub fn usdc(network: &EvmNetwork) -> Option<EvmAsset> {
-        fn create_usdc(address: alloy_primitives::Address) -> EvmAsset {
+    macro_rules! create_usdc {
+        ($addr:expr) => {
             EvmAsset {
-                address: EvmAddress(address),
+                address: EvmAddress($addr),
                 decimals: 6,
                 name: "USD Coin",
                 symbol: "USDC",
             }
-        }
-
-        match network.chain_id {
-            1 => Some(create_usdc(address!(
-                "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
-            ))),
-            11155111 => Some(create_usdc(address!(
-                "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"
-            ))),
-            8453 => Some(create_usdc(address!(
-                "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
-            ))),
-            84531 => Some(create_usdc(address!(
-                "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
-            ))),
-            _ => None,
-        }
+        };
     }
+
+    pub const USDC_ETHEREUM: EvmAsset =
+        create_usdc!(address!("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"));
+    pub const USDC_ETHEREUM_SEPOLIA: EvmAsset =
+        create_usdc!(address!("0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"));
+    pub const USDC_BASE: EvmAsset =
+        create_usdc!(address!("0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"));
+    pub const USDC_BASE_SEPOLIA: EvmAsset =
+        create_usdc!(address!("0x036CbD53842c5426634e7929541eC2318f3dCF7e"));
 }

@@ -6,6 +6,36 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct AmountValue(pub U256);
 
+impl From<u8> for AmountValue {
+    fn from(value: u8) -> Self {
+        AmountValue(U256::from(value))
+    }
+}
+
+impl From<u16> for AmountValue {
+    fn from(value: u16) -> Self {
+        AmountValue(U256::from(value))
+    }
+}
+
+impl From<u32> for AmountValue {
+    fn from(value: u32) -> Self {
+        AmountValue(U256::from(value))
+    }
+}
+
+impl From<u64> for AmountValue {
+    fn from(value: u64) -> Self {
+        AmountValue(U256::from(value))
+    }
+}
+
+impl From<u128> for AmountValue {
+    fn from(value: u128) -> Self {
+        AmountValue(U256::from(value))
+    }
+}
+
 impl Display for AmountValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)

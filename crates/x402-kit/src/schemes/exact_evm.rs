@@ -118,6 +118,12 @@ pub struct ExactEvmScheme {
     pub network: EvmNetwork,
 }
 
+impl ExactEvmScheme {
+    pub fn with_network(network: EvmNetwork) -> Self {
+        ExactEvmScheme { network }
+    }
+}
+
 impl Scheme for ExactEvmScheme {
     type Network = EvmNetwork;
     type Payload = ExactEvmPayload;

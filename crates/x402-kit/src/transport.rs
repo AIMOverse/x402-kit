@@ -3,7 +3,7 @@ use url::Url;
 
 use crate::types::{AmountValue, Any, OutputSchema, X402Version};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaymentRequirements {
     /// Scheme name, defined in "schemes" protocol
@@ -32,7 +32,7 @@ pub struct PaymentRequirements {
     pub extra: Option<Any>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaymentPayload {
     pub x402_version: X402Version,
@@ -41,10 +41,55 @@ pub struct PaymentPayload {
     pub payload: Any,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaymentRequirementsResponse {
     pub x402_version: X402Version,
     pub error: String,
     pub accepts: Vec<PaymentRequirements>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FacilitatorPaymentRequest {
+    pub payment_payload: PaymentPayload,
+    pub payment_requirements: PaymentRequirements,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FacilitatorVerifyResponse {
+    pub is_valid: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub invalid_reason: Option<String>,
+    #[serde(default)]
+    pub payer: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FacilitatorSettleResponse {
+    pub success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_reason: Option<String>,
+    #[serde(default)]
+    pub payer: String,
+    #[serde(default)]
+    pub transaction: String,
+    #[serde(default)]
+    pub network: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FacilitatorSupportedKinds {
+    pub x402_version: X402Version,
+    pub scheme: String,
+    pub network: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FacilitatorSupportedResponse {
+    pub kinds: Vec<FacilitatorSupportedKinds>,
 }
