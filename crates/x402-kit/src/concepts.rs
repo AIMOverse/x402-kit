@@ -70,6 +70,8 @@ pub struct Asset<A: Address> {
     pub symbol: &'static str,
 }
 
+/// Selected payment requirements for a given scheme and address type.
+#[derive(Debug, Clone)]
 pub struct SelectedPaymentRequirements<S, A>
 where
     S: Scheme,
@@ -96,6 +98,7 @@ where
     pub extra: Option<Any>,
 }
 
+/// Signer for a given payment scheme.
 pub trait SchemeSigner {
     type Scheme: Scheme;
     type Error: std::error::Error;
@@ -106,6 +109,7 @@ pub trait SchemeSigner {
     ) -> impl Future<Output = Result<<Self::Scheme as Scheme>::Payload, Self::Error>>;
 }
 
+/// X402 facilitator interface.
 pub trait Facilitator {
     type Error: std::error::Error;
 

@@ -3172,6 +3172,7 @@ name = "x402-kit"
 version = "0.1.0"
 dependencies = [
  "alloy-primitives",
+ "base64",
  "bon",
  "chrono",
  "crypto-bigint 0.6.1",
