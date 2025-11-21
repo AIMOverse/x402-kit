@@ -1,20 +1,60 @@
-use bon::Builder;
+use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::concepts::Facilitator;
+use crate::{
+    concepts::Facilitator,
+    transports::{FacilitatorPaymentRequest, FacilitatorSettleResponse, FacilitatorVerifyResponse},
+};
 
-#[derive(Builder, Debug, Clone)]
-pub struct RemoteFacilitatorClient {
+/// A remote facilitator client that communicates over HTTP.
+///
+/// You can customize the request and response types for verification and settlement
+///
+/// # Type Parameters
+///
+/// - `VReq`: The request type for verification, must be convertible from `FacilitatorPaymentRequest` and serializable.
+/// - `VRes`: The response type for verification, must be convertible into `FacilitatorVerifyResponse` and deserializable.
+/// - `SReq`: The request type for settlement, must be convertible from `FacilitatorPaymentRequest` and serializable.
+/// - `SRes`: The response type for settlement, must be convertible into `FacilitatorSettleResponse` and deserializable.
+#[derive(Debug, Clone)]
+pub struct RemoteFacilitatorClient<VReq, VRes, SReq, SRes>
+where
+    VReq: From<FacilitatorPaymentRequest> + Serialize,
+    VRes: Into<FacilitatorVerifyResponse> + for<'de> Deserialize<'de>,
+    SReq: From<FacilitatorPaymentRequest> + Serialize,
+    SRes: Into<FacilitatorSettleResponse> + for<'de> Deserialize<'de>,
+{
     pub base_url: Url,
     pub client: reqwest::Client,
+    pub _phantom: std::marker::PhantomData<(VReq, VRes, SReq, SRes)>,
 }
 
-impl RemoteFacilitatorClient {
+impl<VReq, VRes, SReq, SRes> RemoteFacilitatorClient<VReq, VRes, SReq, SRes>
+where
+    VReq: From<FacilitatorPaymentRequest> + Serialize,
+    VRes: Into<FacilitatorVerifyResponse> + for<'de> Deserialize<'de>,
+    SReq: From<FacilitatorPaymentRequest> + Serialize,
+    SRes: Into<FacilitatorSettleResponse> + for<'de> Deserialize<'de>,
+{
     pub fn new(base_url: Url) -> Self {
         RemoteFacilitatorClient {
             base_url,
             client: reqwest::Client::new(),
+            _phantom: std::marker::PhantomData,
         }
+    }
+}
+
+impl
+    RemoteFacilitatorClient<
+        FacilitatorPaymentRequest,
+        FacilitatorVerifyResponse,
+        FacilitatorPaymentRequest,
+        FacilitatorSettleResponse,
+    >
+{
+    pub fn new_default(base_url: Url) -> Self {
+        RemoteFacilitatorClient::new(base_url)
     }
 }
 
@@ -28,7 +68,13 @@ pub enum RemoteFacilitatorClientError {
     SerdeError(#[from] serde_json::Error),
 }
 
-impl Facilitator for RemoteFacilitatorClient {
+impl<VReq, VRes, SReq, SRes> Facilitator for RemoteFacilitatorClient<VReq, VRes, SReq, SRes>
+where
+    VReq: From<FacilitatorPaymentRequest> + Serialize,
+    VRes: Into<FacilitatorVerifyResponse> + for<'de> Deserialize<'de>,
+    SReq: From<FacilitatorPaymentRequest> + Serialize,
+    SRes: Into<FacilitatorSettleResponse> + for<'de> Deserialize<'de>,
+{
     type Error = RemoteFacilitatorClientError;
 
     async fn supported(
@@ -47,32 +93,33 @@ impl Facilitator for RemoteFacilitatorClient {
 
     async fn verify(
         &self,
-        request: &crate::transports::FacilitatorPaymentRequest,
+        request: crate::transports::FacilitatorPaymentRequest,
     ) -> Result<crate::transports::FacilitatorVerifyResponse, Self::Error> {
         let result = self
             .client
             .post(self.base_url.join("verify")?)
-            .json(request)
+            .json(&VReq::from(request))
             .send()
             .await?
-            .json()
+            .json::<VRes>()
             .await?;
-        Ok(result)
+
+        Ok(result.into())
     }
 
     async fn settle(
         &self,
-        request: &crate::transports::FacilitatorPaymentRequest,
+        request: crate::transports::FacilitatorPaymentRequest,
     ) -> Result<crate::transports::FacilitatorSettleResponse, Self::Error> {
         let result = self
             .client
             .post(self.base_url.join("settle")?)
-            .json(request)
+            .json(&SReq::from(request))
             .send()
             .await?
-            .json()
+            .json::<SRes>()
             .await?;
 
-        Ok(result)
+        Ok(result.into())
     }
 }

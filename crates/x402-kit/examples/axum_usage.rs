@@ -1,4 +1,9 @@
-use axum::{Json, Router, extract::Request, http::StatusCode, routing::post};
+use axum::{
+    Json, Router,
+    extract::{Request, State},
+    http::StatusCode,
+    routing::post,
+};
 use url::Url;
 use x402_kit::{
     config::Resource, facilitator_client::RemoteFacilitatorClient, networks::evm::assets::UsdcBase,
@@ -7,10 +12,12 @@ use x402_kit::{
 
 #[tokio::main]
 async fn main() {
+    let facilitator_url = std::env::var("FACILITATOR_URL").expect("FACILITATOR_URL not set");
     // build our application with a route
     let app = Router::new()
         // `POST /premium` goes to `premium_content`
-        .route("/premium", post(premium_content));
+        .route("/premium", post(premium_content))
+        .with_state(facilitator_url);
 
     // run our app with hyper, listening globally on port 3000
     println!("Listening on http://0.0.0.0:3000");
@@ -18,7 +25,10 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-async fn premium_content(req: Request) -> (StatusCode, Json<serde_json::Value>) {
+async fn premium_content(
+    State(facilitator_url): State<String>,
+    req: Request,
+) -> (StatusCode, Json<serde_json::Value>) {
     println!("Received request for premium content");
 
     let resource = Resource::builder()
@@ -37,8 +47,7 @@ async fn premium_content(req: Request) -> (StatusCode, Json<serde_json::Value>) 
         .build()
         .into_payment_requirements();
 
-    let facilitator =
-        RemoteFacilitatorClient::new(Url::parse("https://facilitator.payai.network").unwrap());
+    let facilitator = RemoteFacilitatorClient::new_default(Url::parse(&facilitator_url).unwrap());
     let raw_x_payment_header = req.headers().get("X-Payment").map(|v| v.to_str().unwrap());
     println!("Processing payment with header: {:?}", raw_x_payment_header);
 
@@ -48,6 +57,7 @@ async fn premium_content(req: Request) -> (StatusCode, Json<serde_json::Value>) 
         vec![payment_requirements],
     )
     .await;
+    println!("Payment processing result {:?}", result);
 
     match result {
         Ok(response) => {

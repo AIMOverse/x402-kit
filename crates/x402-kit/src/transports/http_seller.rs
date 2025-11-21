@@ -128,12 +128,14 @@ pub async fn verify_payment<F: Facilitator>(
         .try_into()
         .map_err(|err| ErrorResponse::invalid_payment(err, &payment_requirements))?;
 
+    let request = FacilitatorPaymentRequest {
+        payment_header: Some(x_payment_header.clone()),
+        payment_requirements: selected.clone(),
+        payment_payload,
+    };
+
     let verify_response = facilitator
-        .verify(&FacilitatorPaymentRequest {
-            payment_header: Some(x_payment_header.clone()),
-            payment_requirements: selected.clone(),
-            payment_payload,
-        })
+        .verify(request)
         .await
         .map_err(|err| ErrorResponse::server_error(err, &payment_requirements))?;
 
@@ -161,14 +163,15 @@ pub async fn settle_payment<F: Facilitator>(
         .try_into()
         .map_err(|err| ErrorResponse::invalid_payment(err, &payment_requirements))?;
 
-    let settle_response = facilitator
-        .settle(&FacilitatorPaymentRequest {
+    let settle_response: FacilitatorSettleResponse = facilitator
+        .settle(FacilitatorPaymentRequest {
             payment_header: Some(x_payment_header.clone()),
             payment_requirements: selected.clone(),
             payment_payload,
         })
         .await
-        .map_err(|err| ErrorResponse::server_error(err, &payment_requirements))?;
+        .map_err(|err| ErrorResponse::server_error(err, &payment_requirements))?
+        .into();
 
     if settle_response.success {
         Ok(settle_response)

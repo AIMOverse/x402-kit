@@ -117,11 +117,11 @@ pub trait Facilitator {
 
     fn verify(
         &self,
-        request: &FacilitatorPaymentRequest,
+        request: FacilitatorPaymentRequest,
     ) -> impl Future<Output = Result<FacilitatorVerifyResponse, Self::Error>>;
 
     fn settle(
         &self,
-        request: &FacilitatorPaymentRequest,
+        request: FacilitatorPaymentRequest,
     ) -> impl Future<Output = Result<FacilitatorSettleResponse, Self::Error>>;
 }
