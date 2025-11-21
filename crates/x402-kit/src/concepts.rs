@@ -5,9 +5,9 @@ use std::{fmt::Display, marker::PhantomData, str::FromStr};
 use url::Url;
 
 use crate::{
-    transport::{
-        Base64EncodedPayload, FacilitatorPaymentRequest, FacilitatorSettleResponse,
-        FacilitatorSupportedResponse, FacilitatorVerifyResponse, PaymentRequirements,
+    transports::{
+        FacilitatorPaymentRequest, FacilitatorSettleResponse, FacilitatorSupportedResponse,
+        FacilitatorVerifyResponse, PaymentRequirements,
     },
     types::{AmountValue, Any, OutputSchema},
 };
@@ -118,12 +118,10 @@ pub trait Facilitator {
     fn verify(
         &self,
         request: &FacilitatorPaymentRequest,
-        payment_header: &Base64EncodedPayload,
     ) -> impl Future<Output = Result<FacilitatorVerifyResponse, Self::Error>>;
 
     fn settle(
         &self,
         request: &FacilitatorPaymentRequest,
-        payment_header: &Base64EncodedPayload,
     ) -> impl Future<Output = Result<FacilitatorSettleResponse, Self::Error>>;
 }

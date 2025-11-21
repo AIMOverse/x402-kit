@@ -7,6 +7,10 @@ authors = ["Archer <archer@aimo.network>"]
 license = "MIT"
 description = "A fully modular SDK for building complex X402 payment integrations."
 
+[features]
+default = ["facilitator-client"]
+facilitator-client = ["reqwest"]
+
 [dependencies]
 # === Core Deps ===
 hex = { version = "0.4" }
@@ -21,3 +25,6 @@ solana-pubkey = { version = "4.0" }
 solana-signature = { version = "3.1" }
 chrono = { version = "0.4", default-features = false, features = ["std"] }
 base64 = { version = "0.22" }
+
+# === Feature "facilitator-client" ===
+reqwest = { version = "0.12", optional = true, features = ["json"] }

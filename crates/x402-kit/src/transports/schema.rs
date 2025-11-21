@@ -57,6 +57,8 @@ pub struct PaymentRequirementsResponse {
 pub struct FacilitatorPaymentRequest {
     pub payment_payload: PaymentPayload,
     pub payment_requirements: PaymentRequirements,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payment_header: Option<Base64EncodedHeader>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -98,10 +100,19 @@ pub struct FacilitatorSupportedResponse {
     pub kinds: Vec<FacilitatorSupportedKinds>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Base64EncodedPayload(pub String);
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentResponse {
+    pub success: bool,
+    pub transaction: String,
+    pub network: String,
+    pub payer: String,
+}
 
-impl Serialize for Base64EncodedPayload {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Base64EncodedHeader(pub String);
+
+impl Serialize for Base64EncodedHeader {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -110,39 +121,60 @@ impl Serialize for Base64EncodedPayload {
     }
 }
 
-impl<'de> Deserialize<'de> for Base64EncodedPayload {
+impl<'de> Deserialize<'de> for Base64EncodedHeader {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        Ok(Base64EncodedPayload(s))
+        Ok(Base64EncodedHeader(s))
     }
 }
 
-impl Display for Base64EncodedPayload {
+impl Display for Base64EncodedHeader {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
 }
 
-impl TryFrom<PaymentPayload> for Base64EncodedPayload {
+impl TryFrom<PaymentPayload> for Base64EncodedHeader {
     type Error = serde_json::Error;
 
     fn try_from(value: PaymentPayload) -> Result<Self, Self::Error> {
         let json = serde_json::to_string(&value)?;
         let encoded = BASE64_STANDARD.encode(json);
-        Ok(Base64EncodedPayload(encoded))
+        Ok(Base64EncodedHeader(encoded))
     }
 }
 
-impl TryFrom<Base64EncodedPayload> for PaymentPayload {
+impl TryFrom<Base64EncodedHeader> for PaymentPayload {
     type Error = crate::errors::Error;
 
-    fn try_from(value: Base64EncodedPayload) -> Result<Self, Self::Error> {
+    fn try_from(value: Base64EncodedHeader) -> Result<Self, Self::Error> {
         let decoded_bytes = BASE64_STANDARD.decode(&value.0)?;
         let json_str = String::from_utf8(decoded_bytes)?;
         let payload = serde_json::from_str(&json_str)?;
         Ok(payload)
+    }
+}
+
+impl TryFrom<PaymentResponse> for Base64EncodedHeader {
+    type Error = serde_json::Error;
+
+    fn try_from(value: PaymentResponse) -> Result<Self, Self::Error> {
+        let json = serde_json::to_string(&value)?;
+        let encoded = BASE64_STANDARD.encode(json);
+        Ok(Base64EncodedHeader(encoded))
+    }
+}
+
+impl TryFrom<Base64EncodedHeader> for PaymentResponse {
+    type Error = crate::errors::Error;
+
+    fn try_from(value: Base64EncodedHeader) -> Result<Self, Self::Error> {
+        let decoded_bytes = BASE64_STANDARD.decode(&value.0)?;
+        let json_str = String::from_utf8(decoded_bytes)?;
+        let response = serde_json::from_str(&json_str)?;
+        Ok(response)
     }
 }

@@ -5,7 +5,7 @@ use crate::{
     concepts::Scheme,
     config::{PaymentRequirementsConfig, Resource, TransportConfig},
     networks::evm::{EvmAddress, EvmNetwork, EvmSignature, ExplicitEvmAsset, ExplicitEvmNetwork},
-    transport::PaymentRequirements,
+    transports::PaymentRequirements,
     types::{AmountValue, Any},
 };
 
