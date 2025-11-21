@@ -3,9 +3,11 @@ use std::fmt::Display;
 use crate::{
     concepts::Facilitator,
     transports::{
-        Base64EncodedHeader, FacilitatorPaymentRequest, FacilitatorSettleResponse,
-        FacilitatorVerifyResponse, PaymentPayload, PaymentRequirements,
-        PaymentRequirementsResponse, PaymentResponse,
+        Base64EncodedHeader, FacilitatorPaymentRequest, FacilitatorPaymentRequestHeaders,
+        FacilitatorPaymentRequestPayload, FacilitatorSettleFailed, FacilitatorSettleResponse,
+        FacilitatorSettleSuccess, FacilitatorVerifyInvalid, FacilitatorVerifyResponse,
+        FacilitatorVerifyValid, PaymentPayload, PaymentRequirements, PaymentRequirementsResponse,
+        PaymentResponse,
     },
     types::X402Version,
 };
@@ -53,7 +55,7 @@ impl ErrorResponse {
 
     pub fn server_error(error: impl Display, accepts: &Vec<PaymentRequirements>) -> Self {
         ErrorResponse {
-            status: 402,
+            status: 500,
             error: error.to_string(),
             accepts: accepts.clone(),
         }
@@ -122,16 +124,21 @@ pub async fn verify_payment<F: Facilitator>(
     x_payment_header: &Base64EncodedHeader,
     selected: &PaymentRequirements,
     payment_requirements: &Vec<PaymentRequirements>,
-) -> Result<FacilitatorVerifyResponse, ErrorResponse> {
+) -> Result<FacilitatorVerifyValid, ErrorResponse> {
     let payment_payload = x_payment_header
         .clone()
         .try_into()
         .map_err(|err| ErrorResponse::invalid_payment(err, &payment_requirements))?;
 
     let request = FacilitatorPaymentRequest {
-        payment_header: Some(x_payment_header.clone()),
-        payment_requirements: selected.clone(),
-        payment_payload,
+        payload: FacilitatorPaymentRequestPayload {
+            payment_payload,
+            payment_requirements: selected.clone(),
+        },
+        headers: FacilitatorPaymentRequestHeaders {
+            payment_header: x_payment_header.clone(),
+            extra_headers: Default::default(),
+        },
     };
 
     let verify_response = facilitator
@@ -139,15 +146,18 @@ pub async fn verify_payment<F: Facilitator>(
         .await
         .map_err(|err| ErrorResponse::server_error(err, &payment_requirements))?;
 
-    if verify_response.is_valid {
-        Ok(verify_response)
-    } else {
-        Err(ErrorResponse::invalid_payment(
-            verify_response
-                .invalid_reason
-                .unwrap_or("Unknown reason".to_string()),
+    match verify_response {
+        FacilitatorVerifyResponse::Valid(valid) => Ok(valid),
+        FacilitatorVerifyResponse::Invalid(FacilitatorVerifyInvalid {
+            invalid_reason,
+            payer,
+        }) => Err(ErrorResponse::invalid_payment(
+            format!(
+                "Invalid payment: reason='{invalid_reason}', payer={}",
+                payer.unwrap_or("[Unknown]".to_string())
+            ),
             &payment_requirements,
-        ))
+        )),
     }
 }
 
@@ -157,7 +167,7 @@ pub async fn settle_payment<F: Facilitator>(
     x_payment_header: &Base64EncodedHeader,
     selected: &PaymentRequirements,
     payment_requirements: &Vec<PaymentRequirements>,
-) -> Result<FacilitatorSettleResponse, ErrorResponse> {
+) -> Result<FacilitatorSettleSuccess, ErrorResponse> {
     let payment_payload = x_payment_header
         .clone()
         .try_into()
@@ -165,23 +175,32 @@ pub async fn settle_payment<F: Facilitator>(
 
     let settle_response: FacilitatorSettleResponse = facilitator
         .settle(FacilitatorPaymentRequest {
-            payment_header: Some(x_payment_header.clone()),
-            payment_requirements: selected.clone(),
-            payment_payload,
+            payload: FacilitatorPaymentRequestPayload {
+                payment_payload,
+                payment_requirements: selected.clone(),
+            },
+            headers: FacilitatorPaymentRequestHeaders {
+                payment_header: x_payment_header.clone(),
+                extra_headers: Default::default(),
+            },
         })
         .await
         .map_err(|err| ErrorResponse::server_error(err, &payment_requirements))?
         .into();
 
-    if settle_response.success {
-        Ok(settle_response)
-    } else {
-        Err(ErrorResponse::payment_failed(
-            settle_response
-                .error_reason
-                .unwrap_or("Unknown reason".to_string()),
+    match settle_response {
+        FacilitatorSettleResponse::Success(success) => Ok(success),
+        FacilitatorSettleResponse::Failed(FacilitatorSettleFailed {
+            error_reason,
+            payer,
+        }) => Err(ErrorResponse::payment_failed(
+            format!(
+                "Payment settlement failed: reason='{}', payer={}",
+                error_reason,
+                payer.unwrap_or("[Unknown]".to_string())
+            ),
             &payment_requirements,
-        ))
+        )),
     }
 }
 
@@ -250,7 +269,7 @@ pub async fn process_payment_no_settle<F: Facilitator>(
     facilitator: &F,
     raw_x_payment_header: Option<&str>,
     payment_requirements: Vec<PaymentRequirements>,
-) -> Result<FacilitatorVerifyResponse, ErrorResponse> {
+) -> Result<FacilitatorVerifyValid, ErrorResponse> {
     let updated_requirements = update_supported_kinds(facilitator, payment_requirements).await?;
     let x_payment_header = extract_payment_payload(raw_x_payment_header, &updated_requirements)?;
     let selected = select_payment_with_payload(&updated_requirements, &x_payment_header)?;

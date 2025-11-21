@@ -4,7 +4,7 @@ use base64::{Engine, prelude::BASE64_STANDARD};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::types::{AmountValue, Any, OutputSchema, X402Version};
+use crate::types::{AmountValue, Any, OutputSchema, Record, X402Version};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -52,37 +52,86 @@ pub struct PaymentRequirementsResponse {
     pub accepts: Vec<PaymentRequirements>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct FacilitatorPaymentRequest {
+    pub payload: FacilitatorPaymentRequestPayload,
+    pub headers: FacilitatorPaymentRequestHeaders,
+}
+
+#[derive(Debug, Clone)]
+pub struct FacilitatorPaymentRequestPayload {
     pub payment_payload: PaymentPayload,
     pub payment_requirements: PaymentRequirements,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub payment_header: Option<Base64EncodedHeader>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FacilitatorVerifyResponse {
-    pub is_valid: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub invalid_reason: Option<String>,
-    #[serde(default)]
+#[derive(Debug, Clone)]
+pub struct FacilitatorPaymentRequestHeaders {
+    pub payment_header: Base64EncodedHeader,
+    pub extra_headers: Record<String>,
+}
+
+#[derive(Debug, Clone)]
+pub enum FacilitatorVerifyResponse {
+    Valid(FacilitatorVerifyValid),
+    Invalid(FacilitatorVerifyInvalid),
+}
+
+impl FacilitatorVerifyResponse {
+    pub fn is_valid(&self) -> bool {
+        matches!(self, FacilitatorVerifyResponse::Valid(_))
+    }
+
+    pub fn valid(valid: FacilitatorVerifyValid) -> Self {
+        FacilitatorVerifyResponse::Valid(valid)
+    }
+
+    pub fn invalid(invalid: FacilitatorVerifyInvalid) -> Self {
+        FacilitatorVerifyResponse::Invalid(invalid)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct FacilitatorVerifyValid {
     pub payer: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FacilitatorSettleResponse {
-    pub success: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error_reason: Option<String>,
-    #[serde(default)]
+#[derive(Debug, Clone)]
+pub struct FacilitatorVerifyInvalid {
+    pub invalid_reason: String,
+    pub payer: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub enum FacilitatorSettleResponse {
+    Success(FacilitatorSettleSuccess),
+    Failed(FacilitatorSettleFailed),
+}
+
+impl FacilitatorSettleResponse {
+    pub fn is_success(&self) -> bool {
+        matches!(self, FacilitatorSettleResponse::Success(_))
+    }
+
+    pub fn success(success: FacilitatorSettleSuccess) -> Self {
+        FacilitatorSettleResponse::Success(success)
+    }
+
+    pub fn failed(failed: FacilitatorSettleFailed) -> Self {
+        FacilitatorSettleResponse::Failed(failed)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct FacilitatorSettleSuccess {
     pub payer: String,
-    #[serde(default)]
     pub transaction: String,
-    #[serde(default)]
     pub network: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct FacilitatorSettleFailed {
+    pub error_reason: String,
+    pub payer: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
