@@ -20,13 +20,13 @@ pub struct Nonce([u8; 32]);
 
 impl Debug for Nonce {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Nonce({})", hex::encode(self.0))
+        write!(f, "Nonce(0x{})", hex::encode(self.0))
     }
 }
 
 impl Display for Nonce {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", hex::encode(self.0))
+        write!(f, "0x{}", hex::encode(self.0))
     }
 }
 
@@ -34,6 +34,7 @@ impl FromStr for Nonce {
     type Err = hex::FromHexError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = s.strip_prefix("0x").unwrap_or(s);
         let bytes = hex::decode(s)?;
         if bytes.len() != 32 {
             return Err(hex::FromHexError::InvalidStringLength);
