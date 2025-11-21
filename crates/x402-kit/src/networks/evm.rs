@@ -121,25 +121,83 @@ impl Signature for EvmSignature {
 
 pub type EvmAsset = Asset<EvmAddress>;
 
+pub trait ExplicitEvmNetwork {
+    const NETWORK: EvmNetwork;
+
+    fn network() -> EvmNetwork {
+        Self::NETWORK
+    }
+}
+
+pub trait ExplicitEvmAsset {
+    type NETWORK: ExplicitEvmNetwork;
+
+    const ASSET: EvmAsset;
+
+    fn asset() -> EvmAsset {
+        Self::ASSET
+    }
+}
+
+impl<T> From<T> for EvmNetwork
+where
+    T: ExplicitEvmNetwork,
+{
+    fn from(_: T) -> Self {
+        T::network()
+    }
+}
+
+impl<T> From<T> for EvmAsset
+where
+    T: ExplicitEvmAsset,
+{
+    fn from(_: T) -> Self {
+        T::asset()
+    }
+}
+
 pub mod networks {
     use super::*;
 
-    pub const ETHEREUM: EvmNetwork = EvmNetwork {
-        name: "ethereum",
-        chain_id: 1,
-    };
-    pub const ETHEREUM_SEPOLIA: EvmNetwork = EvmNetwork {
-        name: "ethereum-sepolia",
-        chain_id: 11155111,
-    };
-    pub const BASE: EvmNetwork = EvmNetwork {
-        name: "base",
-        chain_id: 8453,
-    };
-    pub const BASE_SEPOLIA: EvmNetwork = EvmNetwork {
-        name: "base-sepolia",
-        chain_id: 84531,
-    };
+    macro_rules! define_explicit_evm_network {
+        ($struct_name:ident, $network_const:expr) => {
+            pub struct $struct_name;
+
+            impl ExplicitEvmNetwork for $struct_name {
+                const NETWORK: EvmNetwork = $network_const;
+            }
+        };
+    }
+
+    define_explicit_evm_network!(
+        Ethereum,
+        EvmNetwork {
+            name: "ethereum",
+            chain_id: 1,
+        }
+    );
+    define_explicit_evm_network!(
+        EthereumSepolia,
+        EvmNetwork {
+            name: "ethereum-sepolia",
+            chain_id: 11155111,
+        }
+    );
+    define_explicit_evm_network!(
+        Base,
+        EvmNetwork {
+            name: "base",
+            chain_id: 8453,
+        }
+    );
+    define_explicit_evm_network!(
+        BaseSepolia,
+        EvmNetwork {
+            name: "base-sepolia",
+            chain_id: 84531,
+        }
+    );
 }
 
 pub mod assets {
@@ -154,23 +212,50 @@ pub mod assets {
         symbol: "ETH",
     };
 
-    macro_rules! create_usdc {
-        ($addr:expr) => {
-            EvmAsset {
-                address: EvmAddress($addr),
-                decimals: 6,
-                name: "USD Coin",
-                symbol: "USDC",
+    macro_rules! define_explicit_evm_asset {
+        ($struct_name:ident, $network_struct:ty, $addr:expr, $decimals:expr, $name:expr, $symbol:expr) => {
+            pub struct $struct_name;
+
+            impl ExplicitEvmAsset for $struct_name {
+                type NETWORK = $network_struct;
+
+                const ASSET: EvmAsset = EvmAsset {
+                    address: EvmAddress(address!($addr)),
+                    decimals: $decimals,
+                    name: $name,
+                    symbol: $symbol,
+                };
             }
         };
     }
 
-    pub const USDC_ETHEREUM: EvmAsset =
-        create_usdc!(address!("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"));
-    pub const USDC_ETHEREUM_SEPOLIA: EvmAsset =
-        create_usdc!(address!("0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"));
-    pub const USDC_BASE: EvmAsset =
-        create_usdc!(address!("0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"));
-    pub const USDC_BASE_SEPOLIA: EvmAsset =
-        create_usdc!(address!("0x036CbD53842c5426634e7929541eC2318f3dCF7e"));
+    macro_rules! define_explicit_usdc {
+        ($struct_name:ident, $network_struct:ty, $addr:expr) => {
+            define_explicit_evm_asset!($struct_name, $network_struct, $addr, 6, "USD Coin", "USDC");
+        };
+    }
+
+    define_explicit_usdc!(
+        UsdcEthereum,
+        networks::Ethereum,
+        "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+    );
+
+    define_explicit_usdc!(
+        UsdcEthereumSepolia,
+        networks::EthereumSepolia,
+        "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"
+    );
+
+    define_explicit_usdc!(
+        UsdcBase,
+        networks::Base,
+        "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    );
+
+    define_explicit_usdc!(
+        UsdcBaseSepolia,
+        networks::BaseSepolia,
+        "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+    );
 }

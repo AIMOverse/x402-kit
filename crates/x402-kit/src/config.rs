@@ -29,6 +29,7 @@ pub struct TransportConfig<A: Address> {
     #[builder(into)]
     pub pay_to: A,
     /// The asset for the payment
+    #[builder(into)]
     pub asset: Asset<A>,
     /// The amount of the asset to pay, in smallest units.
     #[builder(into)]
@@ -78,7 +79,10 @@ mod tests {
     use alloy_primitives::address;
     use serde_json::Value;
 
-    use crate::networks::evm::{EvmNetwork, assets::USDC_BASE_SEPOLIA, networks::BASE_SEPOLIA};
+    use crate::networks::evm::{
+        EvmNetwork, ExplicitEvmAsset, ExplicitEvmNetwork, assets::UsdcBaseSepolia,
+        networks::BaseSepolia,
+    };
 
     struct ExampleExactEvmScheme(EvmNetwork);
 
@@ -109,13 +113,13 @@ mod tests {
             .transport(
                 TransportConfig::builder()
                     .amount(1000u64)
-                    .asset(USDC_BASE_SEPOLIA)
+                    .asset(UsdcBaseSepolia)
                     .max_timeout_seconds(300)
                     .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
                     .resource(resource)
                     .build(),
             )
-            .scheme(ExampleExactEvmScheme(BASE_SEPOLIA))
+            .scheme(ExampleExactEvmScheme(BaseSepolia::network()))
             .build();
 
         let payment_requirements = PaymentRequirements::from(config);
@@ -136,7 +140,7 @@ mod tests {
         assert_eq!(payment_requirements.max_timeout_seconds, 300);
         assert_eq!(
             payment_requirements.asset,
-            USDC_BASE_SEPOLIA.address.to_string()
+            UsdcBaseSepolia::asset().address.to_string()
         );
     }
 }

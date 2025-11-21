@@ -1,8 +1,10 @@
+use bon::Builder;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     concepts::Scheme,
-    networks::evm::{EvmAddress, EvmNetwork, EvmSignature},
+    config::{PaymentRequirementsConfig, Resource, TransportConfig},
+    networks::evm::{EvmAddress, EvmNetwork, EvmSignature, ExplicitEvmAsset, ExplicitEvmNetwork},
     types::AmountValue,
 };
 
@@ -134,5 +136,37 @@ impl Scheme for ExactEvmScheme {
 
     fn scheme_name(&self) -> &str {
         "exact"
+    }
+}
+
+#[derive(Builder, Debug, Clone)]
+pub struct ExactEvmConfig<N: ExplicitEvmNetwork, A: ExplicitEvmAsset<NETWORK = N>> {
+    pub network: N,
+    pub asset: A,
+    #[builder(into)]
+    pub pay_to: EvmAddress,
+    #[builder(into)]
+    pub amount: AmountValue,
+    pub max_timeout_seconds_override: Option<u64>,
+    pub resource: Resource,
+}
+
+impl<N, A> ExactEvmConfig<N, A>
+where
+    N: ExplicitEvmNetwork,
+    A: ExplicitEvmAsset<NETWORK = N>,
+{
+    pub fn into_config(self) -> PaymentRequirementsConfig<ExactEvmScheme, EvmAddress> {
+        PaymentRequirementsConfig {
+            scheme: ExactEvmScheme::with_network(N::network()),
+            transport: TransportConfig {
+                pay_to: self.pay_to,
+                asset: A::asset(),
+                amount: self.amount,
+                max_timeout_seconds: self.max_timeout_seconds_override.unwrap_or(300),
+                resource: self.resource,
+            },
+            extra: None,
+        }
     }
 }
