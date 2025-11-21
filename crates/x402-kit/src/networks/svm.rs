@@ -4,7 +4,7 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
-use solana_sdk::pubkey::{ParsePubkeyError, Pubkey};
+use solana_pubkey::{ParsePubkeyError, Pubkey};
 
 use crate::concepts::{Address, NetworkFamily, Signature};
 
@@ -67,13 +67,13 @@ impl<'de> Deserialize<'de> for SvmAddress {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub struct SvmSignature(pub solana_sdk::signature::Signature);
+pub struct SvmSignature(pub solana_signature::Signature);
 
 impl FromStr for SvmSignature {
-    type Err = solana_sdk::signature::ParseSignatureError;
+    type Err = solana_signature::ParseSignatureError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let sig = solana_sdk::signature::Signature::from_str(s)?;
+        let sig = solana_signature::Signature::from_str(s)?;
         Ok(SvmSignature(sig))
     }
 }
@@ -105,8 +105,7 @@ impl<'de> Deserialize<'de> for SvmSignature {
         D: serde::Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        let sig =
-            solana_sdk::signature::Signature::from_str(&s).map_err(serde::de::Error::custom)?;
+        let sig = solana_signature::Signature::from_str(&s).map_err(serde::de::Error::custom)?;
         Ok(SvmSignature(sig))
     }
 }
@@ -129,7 +128,7 @@ pub mod networks {
 }
 
 pub mod assets {
-    use solana_sdk::pubkey;
+    use solana_pubkey::pubkey;
 
     use super::*;
 
