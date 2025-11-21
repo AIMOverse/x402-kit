@@ -5,11 +5,13 @@ use crate::{
     concepts::Scheme,
     config::{PaymentRequirementsConfig, Resource, TransportConfig},
     networks::evm::{EvmAddress, EvmNetwork, EvmSignature, ExplicitEvmAsset, ExplicitEvmNetwork},
-    types::AmountValue,
+    transport::PaymentRequirements,
+    types::{AmountValue, Any},
 };
 
 use std::{
     fmt::{Debug, Display},
+    marker::PhantomData,
     str::FromStr,
 };
 
@@ -141,14 +143,15 @@ impl Scheme for ExactEvmScheme {
 
 #[derive(Builder, Debug, Clone)]
 pub struct ExactEvmConfig<N: ExplicitEvmNetwork, A: ExplicitEvmAsset<NETWORK = N>> {
-    pub network: N,
+    #[builder(default)]
+    pub phantom: PhantomData<N>,
     pub asset: A,
     #[builder(into)]
     pub pay_to: EvmAddress,
-    #[builder(into)]
-    pub amount: AmountValue,
+    pub amount: u64,
     pub max_timeout_seconds_override: Option<u64>,
     pub resource: Resource,
+    pub extra: Option<Any>,
 }
 
 impl<N, A> ExactEvmConfig<N, A>
@@ -162,11 +165,48 @@ where
             transport: TransportConfig {
                 pay_to: self.pay_to,
                 asset: A::asset(),
-                amount: self.amount,
+                amount: self.amount.into(),
                 max_timeout_seconds: self.max_timeout_seconds_override.unwrap_or(300),
                 resource: self.resource,
             },
-            extra: None,
+            extra: self.extra,
         }
+    }
+
+    pub fn into_payment_requirements(self) -> PaymentRequirements {
+        self.into_config().into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use alloy_primitives::address;
+    use url::Url;
+
+    use crate::networks::evm::assets::UsdcBaseSepolia;
+
+    use super::*;
+
+    #[test]
+    fn test_build_payment_requirements() {
+        let resource = Resource::builder()
+            .url(Url::parse("https://example.com/payment").unwrap())
+            .description("Payment for services".to_string())
+            .mime_type("application/json".to_string())
+            .build();
+        let config = ExactEvmConfig::builder()
+            .asset(UsdcBaseSepolia)
+            .amount(1000)
+            .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
+            .resource(resource)
+            .build();
+        let payment_requirements = config.into_payment_requirements();
+
+        assert_eq!(payment_requirements.scheme, "exact");
+        assert_eq!(
+            payment_requirements.asset,
+            UsdcBaseSepolia::asset().address.to_string()
+        );
+        assert_eq!(payment_requirements.max_amount_required, 1000u64.into());
     }
 }
