@@ -4,7 +4,7 @@ use axum::{
     http::StatusCode,
     routing::post,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use url::Url;
 use x402_kit::{
     config::Resource,
@@ -12,8 +12,8 @@ use x402_kit::{
     networks::evm::assets::UsdcBase,
     schemes::exact_evm::ExactEvmConfig,
     transports::{
-        FacilitatorSettleFailed, FacilitatorSettleResponse, FacilitatorSettleSuccess,
-        http_seller::process_payment,
+        FacilitatorPaymentRequest, FacilitatorSettleFailed, FacilitatorSettleResponse,
+        FacilitatorSettleSuccess, http_seller::process_payment,
     },
 };
 
@@ -126,6 +126,14 @@ async fn facilitator_types_override(
         pub payer: Option<String>,
     }
 
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct CustomSettleRequest {
+        pub x402_version: i8,
+        pub payment_payload: x402_kit::transports::PaymentPayload,
+        pub payment_requirements: x402_kit::transports::PaymentRequirements,
+    }
+
     // Implement conversion trait
 
     impl IntoSettleResponse for CustomSettleResponse {
@@ -134,7 +142,7 @@ async fn facilitator_types_override(
                 FacilitatorSettleResponse::Success(FacilitatorSettleSuccess {
                     transaction: self.tx_hash.unwrap_or("[Unknown]".to_string()),
                     network: self.network_id.unwrap_or("[Unknown]".to_string()),
-                    payer: self.payer.unwrap_or("Unknown".to_string()),
+                    payer: self.payer.unwrap_or("[Unknown]".to_string()),
                 })
             } else {
                 FacilitatorSettleResponse::Failed(FacilitatorSettleFailed {
@@ -145,9 +153,20 @@ async fn facilitator_types_override(
         }
     }
 
+    impl From<FacilitatorPaymentRequest> for CustomSettleRequest {
+        fn from(value: FacilitatorPaymentRequest) -> Self {
+            CustomSettleRequest {
+                x402_version: 1,
+                payment_payload: value.payload.payment_payload,
+                payment_requirements: value.payload.payment_requirements,
+            }
+        }
+    }
+
     // Override the facilitator client with custom types
 
     let facilitator = RemoteFacilitatorClient::new_default(Url::parse(&facilitator_url).unwrap())
+        .with_settle_request_type::<CustomSettleRequest>()
         .with_settle_response_type::<CustomSettleResponse>();
 
     let raw_x_payment_header = req.headers().get("X-Payment").map(|v| v.to_str().unwrap());
