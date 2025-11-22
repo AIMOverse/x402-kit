@@ -130,9 +130,10 @@ pub async fn verify_payment<F: Facilitator>(
         .try_into()
         .map_err(|err| ErrorResponse::invalid_payment(err, &payment_requirements))?;
 
-    println!(
+    tracing::debug!(
         "Verifying payment for scheme={}, network={}",
-        selected.scheme, selected.network
+        selected.scheme,
+        selected.network,
     );
 
     let request = FacilitatorPaymentRequest {
