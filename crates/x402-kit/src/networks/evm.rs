@@ -195,7 +195,7 @@ pub mod networks {
         BaseSepolia,
         EvmNetwork {
             name: "base-sepolia",
-            chain_id: 84531,
+            chain_id: 84532,
         }
     );
 }
