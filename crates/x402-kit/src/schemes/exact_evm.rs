@@ -152,7 +152,7 @@ pub struct ExactEvmConfig<N: ExplicitEvmNetwork, A: ExplicitEvmAsset<NETWORK = N
     pub amount: u64,
     pub max_timeout_seconds_override: Option<u64>,
     pub resource: Resource,
-    pub extra: Option<Any>,
+    pub extra_override: Option<Any>,
 }
 
 impl<N, A> ExactEvmConfig<N, A>
@@ -162,15 +162,17 @@ where
 {
     pub fn into_config(self) -> PaymentRequirementsConfig<ExactEvmScheme, EvmAddress> {
         PaymentRequirementsConfig {
-            scheme: ExactEvmScheme::with_network(N::network()),
+            scheme: ExactEvmScheme::with_network(N::NETWORK),
             transport: TransportConfig {
                 pay_to: self.pay_to,
-                asset: A::asset(),
+                asset: A::ASSET,
                 amount: self.amount.into(),
                 max_timeout_seconds: self.max_timeout_seconds_override.unwrap_or(300),
                 resource: self.resource,
             },
-            extra: self.extra,
+            extra: self
+                .extra_override
+                .or(A::EIP712_DOMAIN.and_then(|v| serde_json::to_value(v).ok())),
         }
     }
 
@@ -182,6 +184,7 @@ where
 #[cfg(test)]
 mod tests {
     use alloy_primitives::address;
+    use serde_json::json;
     use url::Url;
 
     use crate::networks::evm::assets::UsdcBaseSepolia;
@@ -206,8 +209,41 @@ mod tests {
         assert_eq!(payment_requirements.scheme, "exact");
         assert_eq!(
             payment_requirements.asset,
-            UsdcBaseSepolia::asset().address.to_string()
+            UsdcBaseSepolia::ASSET.address.to_string()
         );
         assert_eq!(payment_requirements.max_amount_required, 1000u64.into());
+    }
+
+    #[test]
+    fn test_extra_override() {
+        let resource = Resource::builder()
+            .url(Url::parse("https://example.com/payment").unwrap())
+            .description("Payment for services".to_string())
+            .mime_type("application/json".to_string())
+            .build();
+        let pr = ExactEvmConfig::builder()
+            .asset(UsdcBaseSepolia)
+            .amount(1000)
+            .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
+            .resource(resource.clone())
+            .build()
+            .into_payment_requirements();
+
+        assert!(pr.extra.is_some());
+        assert_eq!(
+            pr.extra,
+            serde_json::to_value(UsdcBaseSepolia::EIP712_DOMAIN).ok()
+        );
+
+        let pr = ExactEvmConfig::builder()
+            .asset(UsdcBaseSepolia)
+            .amount(1000)
+            .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
+            .resource(resource)
+            .extra_override(json!({"foo": "bar"}))
+            .build()
+            .into_payment_requirements();
+
+        assert_eq!(pr.extra, Some(json!({"foo": "bar"})));
     }
 }

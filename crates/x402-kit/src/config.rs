@@ -119,7 +119,7 @@ mod tests {
                     .resource(resource)
                     .build(),
             )
-            .scheme(ExampleExactEvmScheme(BaseSepolia::network()))
+            .scheme(ExampleExactEvmScheme(BaseSepolia::NETWORK))
             .build();
 
         let payment_requirements = PaymentRequirements::from(config);
@@ -140,7 +140,7 @@ mod tests {
         assert_eq!(payment_requirements.max_timeout_seconds, 300);
         assert_eq!(
             payment_requirements.asset,
-            UsdcBaseSepolia::asset().address.to_string()
+            UsdcBaseSepolia::ASSET.address.to_string()
         );
     }
 }

@@ -123,20 +123,19 @@ pub type EvmAsset = Asset<EvmAddress>;
 
 pub trait ExplicitEvmNetwork {
     const NETWORK: EvmNetwork;
+}
 
-    fn network() -> EvmNetwork {
-        Self::NETWORK
-    }
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct Eip712Domain {
+    pub name: &'static str,
+    pub version: &'static str,
 }
 
 pub trait ExplicitEvmAsset {
     type NETWORK: ExplicitEvmNetwork;
 
     const ASSET: EvmAsset;
-
-    fn asset() -> EvmAsset {
-        Self::ASSET
-    }
+    const EIP712_DOMAIN: Option<Eip712Domain>;
 }
 
 impl<T> From<T> for EvmNetwork
@@ -144,7 +143,7 @@ where
     T: ExplicitEvmNetwork,
 {
     fn from(_: T) -> Self {
-        T::network()
+        T::NETWORK
     }
 }
 
@@ -153,7 +152,7 @@ where
     T: ExplicitEvmAsset,
 {
     fn from(_: T) -> Self {
-        T::asset()
+        T::ASSET
     }
 }
 
@@ -213,7 +212,15 @@ pub mod assets {
     };
 
     macro_rules! define_explicit_evm_asset {
-        ($struct_name:ident, $network_struct:ty, $addr:expr, $decimals:expr, $name:expr, $symbol:expr) => {
+        (
+            $struct_name:ident,
+            $network_struct:ty,
+            $addr:expr,
+            $decimals:expr,
+            $name:expr,
+            $symbol:expr,
+            $eip712_domain:expr
+        ) => {
             pub struct $struct_name;
 
             impl ExplicitEvmAsset for $struct_name {
@@ -225,13 +232,26 @@ pub mod assets {
                     name: $name,
                     symbol: $symbol,
                 };
+
+                const EIP712_DOMAIN: Option<Eip712Domain> = $eip712_domain;
             }
         };
     }
 
     macro_rules! define_explicit_usdc {
         ($struct_name:ident, $network_struct:ty, $addr:expr) => {
-            define_explicit_evm_asset!($struct_name, $network_struct, $addr, 6, "USD Coin", "USDC");
+            define_explicit_evm_asset!(
+                $struct_name,
+                $network_struct,
+                $addr,
+                6,
+                "USD Coin",
+                "USDC",
+                Some(Eip712Domain {
+                    name: "USD Coin",
+                    version: "2",
+                })
+            );
         };
     }
 
