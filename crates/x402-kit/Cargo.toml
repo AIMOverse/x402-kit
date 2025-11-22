@@ -8,8 +8,9 @@ license = "MIT"
 description = "A fully modular SDK for building complex X402 payment integrations."
 
 [features]
-default = ["facilitator-client"]
+default = ["facilitator-client", "log-tracing"]
 facilitator-client = ["reqwest"]
+log-tracing = ["tracing"]
 
 [dependencies]
 # === Core Deps ===
@@ -26,9 +27,14 @@ solana-signature = { version = "3.1" }
 chrono = { version = "0.4", default-features = false, features = ["std"] }
 base64 = { version = "0.22" }
 
+# === Feature "tracing" ===
+tracing = { version = "0.1", optional = true }
+
 # === Feature "facilitator-client" ===
 reqwest = { version = "0.12", optional = true, features = ["json"] }
 
 [dev-dependencies]
+url-macro = { version = "0.2" }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-axum = { version = "0" }
+axum = { version = "0.8" }
+tracing-subscriber = { version = "0.3" }

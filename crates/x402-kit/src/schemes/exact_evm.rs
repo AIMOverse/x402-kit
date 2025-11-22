@@ -167,7 +167,7 @@ where
                 pay_to: self.pay_to,
                 asset: A::ASSET,
                 amount: self.amount.into(),
-                max_timeout_seconds: self.max_timeout_seconds_override.unwrap_or(300),
+                max_timeout_seconds: self.max_timeout_seconds_override.unwrap_or(60),
                 resource: self.resource,
             },
             extra: self

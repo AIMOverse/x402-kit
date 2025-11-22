@@ -40,6 +40,8 @@ pub enum FieldRequired {
 #[derive(Builder, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Input {
+    pub discoverable: bool,
+
     #[serde(rename = "type")]
     pub input_type: InputType,
 

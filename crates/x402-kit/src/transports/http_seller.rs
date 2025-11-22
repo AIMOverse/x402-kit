@@ -32,7 +32,7 @@ impl ErrorResponse {
     pub fn payment_required(accepts: &Vec<PaymentRequirements>) -> Self {
         ErrorResponse {
             status: 402,
-            error: "Payment required to access this resource".to_string(),
+            error: "X-PAYMENT header is required".to_string(),
             accepts: accepts.clone(),
         }
     }
@@ -130,6 +130,11 @@ pub async fn verify_payment<F: Facilitator>(
         .try_into()
         .map_err(|err| ErrorResponse::invalid_payment(err, &payment_requirements))?;
 
+    println!(
+        "Verifying payment for scheme={}, network={}",
+        selected.scheme, selected.network
+    );
+
     let request = FacilitatorPaymentRequest {
         payload: FacilitatorPaymentRequestPayload {
             payment_payload,
@@ -210,25 +215,35 @@ pub async fn process_payment<F: Facilitator>(
     raw_x_payment_header: Option<&str>,
     payment_requirements: Vec<PaymentRequirements>,
 ) -> Result<PaymentResponse, ErrorResponse> {
-    let updated_requirements = update_supported_kinds(facilitator, payment_requirements).await?;
-    let x_payment_header = extract_payment_payload(raw_x_payment_header, &updated_requirements)?;
-    let selected = select_payment_with_payload(&updated_requirements, &x_payment_header)?;
+    let x_payment_header = extract_payment_payload(raw_x_payment_header, &payment_requirements)?;
+    let selected = select_payment_with_payload(&payment_requirements, &x_payment_header)?;
 
-    verify_payment(
+    let valid = verify_payment(
         facilitator,
         &x_payment_header,
         &selected,
-        &updated_requirements,
+        &payment_requirements,
     )
     .await?;
+
+    #[cfg(feature = "log-tracing")]
+    tracing::debug!("Payment verified for payer: {}", valid.payer);
 
     let settle_response = settle_payment(
         facilitator,
         &x_payment_header,
         &selected,
-        &updated_requirements,
+        &payment_requirements,
     )
     .await?;
+
+    #[cfg(feature = "log-tracing")]
+    tracing::debug!(
+        "Payment settled: payer='{}', network='{}', transaction='{}'",
+        settle_response.payer,
+        settle_response.network,
+        settle_response.transaction
+    );
 
     Ok(PaymentResponse {
         success: true,
