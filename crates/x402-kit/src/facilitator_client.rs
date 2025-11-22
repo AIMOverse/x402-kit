@@ -112,6 +112,14 @@ impl IntoSettleResponse for DefaultSettleResponse {
     }
 }
 
+/// A type alias for a RemoteFacilitatorClient using the default request and response types.
+pub type DefaultRemoteFacilitatorClient = RemoteFacilitatorClient<
+    DefaultPaymentRequest,
+    DefaultVerifyResponse,
+    DefaultPaymentRequest,
+    DefaultSettleResponse,
+>;
+
 impl<VReq, VRes, SReq, SRes> RemoteFacilitatorClient<VReq, VRes, SReq, SRes>
 where
     VReq: From<FacilitatorPaymentRequest> + Serialize,
