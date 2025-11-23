@@ -3,7 +3,7 @@ use url::Url;
 
 use crate::{
     concepts::{Address, Asset, NetworkFamily, Scheme},
-    transports::PaymentRequirements,
+    transport::PaymentRequirements,
     types::{AmountValue, Any, OutputSchema},
 };
 

@@ -5,7 +5,7 @@ use std::{fmt::Display, marker::PhantomData, str::FromStr};
 use url::Url;
 
 use crate::{
-    transports::{
+    transport::{
         FacilitatorPaymentRequest, FacilitatorSettleResponse, FacilitatorSupportedResponse,
         FacilitatorVerifyResponse, PaymentRequirements,
     },

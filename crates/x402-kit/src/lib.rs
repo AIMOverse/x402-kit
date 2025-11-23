@@ -3,7 +3,8 @@ pub mod config;
 pub mod errors;
 pub mod networks;
 pub mod schemes;
-pub mod transports;
+pub mod toolkit;
+pub mod transport;
 pub mod types;
 
 #[cfg(feature = "facilitator-client")]

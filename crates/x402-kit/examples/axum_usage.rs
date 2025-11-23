@@ -13,9 +13,10 @@ use x402_kit::{
     facilitator_client::{IntoSettleResponse, RemoteFacilitatorClient},
     networks::evm::assets::{UsdcBase, UsdcBaseSepolia},
     schemes::exact_evm::ExactEvmConfig,
-    transports::{
+    toolkit::http_server::process_payment,
+    transport::{
         Base64EncodedHeader, FacilitatorPaymentRequest, FacilitatorSettleFailed,
-        FacilitatorSettleResponse, FacilitatorSettleSuccess, http_seller::process_payment,
+        FacilitatorSettleResponse, FacilitatorSettleSuccess, PaymentPayload, PaymentRequirements,
     },
     types::{Input, InputMethod, InputType, OutputSchema},
 };
@@ -161,8 +162,8 @@ async fn facilitator_types_override(
     #[serde(rename_all = "camelCase")]
     struct CustomSettleRequest {
         pub x402_version: i8,
-        pub payment_payload: x402_kit::transports::PaymentPayload,
-        pub payment_requirements: x402_kit::transports::PaymentRequirements,
+        pub payment_payload: PaymentPayload,
+        pub payment_requirements: PaymentRequirements,
     }
 
     // Implement conversion trait

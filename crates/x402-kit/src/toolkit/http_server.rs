@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::{
     concepts::Facilitator,
-    transports::{
+    transport::{
         Base64EncodedHeader, FacilitatorPaymentRequest, FacilitatorPaymentRequestHeaders,
         FacilitatorPaymentRequestPayload, FacilitatorSettleFailed, FacilitatorSettleResponse,
         FacilitatorSettleSuccess, FacilitatorVerifyInvalid, FacilitatorVerifyResponse,

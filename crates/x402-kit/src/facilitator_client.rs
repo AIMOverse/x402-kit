@@ -3,10 +3,10 @@ use url::Url;
 
 use crate::{
     concepts::Facilitator,
-    transports::{
+    transport::{
         FacilitatorPaymentRequest, FacilitatorSettleFailed, FacilitatorSettleResponse,
-        FacilitatorSettleSuccess, FacilitatorVerifyInvalid, FacilitatorVerifyResponse,
-        FacilitatorVerifyValid, PaymentPayload, PaymentRequirements,
+        FacilitatorSettleSuccess, FacilitatorSupportedResponse, FacilitatorVerifyInvalid,
+        FacilitatorVerifyResponse, FacilitatorVerifyValid, PaymentPayload, PaymentRequirements,
     },
     types::Record,
 };
@@ -230,9 +230,7 @@ where
 {
     type Error = RemoteFacilitatorClientError;
 
-    async fn supported(
-        &self,
-    ) -> Result<crate::transports::FacilitatorSupportedResponse, Self::Error> {
+    async fn supported(&self) -> Result<FacilitatorSupportedResponse, Self::Error> {
         let supported = self
             .client
             .get(self.base_url.join("supported")?)
@@ -246,8 +244,8 @@ where
 
     async fn verify(
         &self,
-        request: crate::transports::FacilitatorPaymentRequest,
-    ) -> Result<crate::transports::FacilitatorVerifyResponse, Self::Error> {
+        request: FacilitatorPaymentRequest,
+    ) -> Result<FacilitatorVerifyResponse, Self::Error> {
         let result = self
             .client
             .post(self.base_url.join("verify")?)
@@ -262,8 +260,8 @@ where
 
     async fn settle(
         &self,
-        request: crate::transports::FacilitatorPaymentRequest,
-    ) -> Result<crate::transports::FacilitatorSettleResponse, Self::Error> {
+        request: FacilitatorPaymentRequest,
+    ) -> Result<FacilitatorSettleResponse, Self::Error> {
         let result = self
             .client
             .post(self.base_url.join("settle")?)
