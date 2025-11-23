@@ -5,9 +5,9 @@ use crate::{
     transport::{
         Base64EncodedHeader, FacilitatorPaymentRequest, FacilitatorPaymentRequestHeaders,
         FacilitatorPaymentRequestPayload, FacilitatorSettleFailed, FacilitatorSettleResponse,
-        FacilitatorSettleSuccess, FacilitatorVerifyInvalid, FacilitatorVerifyResponse,
-        FacilitatorVerifyValid, PaymentPayload, PaymentRequirements, PaymentRequirementsResponse,
-        PaymentResponse,
+        FacilitatorSettleSuccess, FacilitatorSupportedResponse, FacilitatorVerifyInvalid,
+        FacilitatorVerifyResponse, FacilitatorVerifyValid, PaymentPayload, PaymentRequirements,
+        PaymentRequirementsResponse, PaymentResponse,
     },
     types::X402Version,
 };
@@ -84,7 +84,17 @@ pub async fn update_supported_kinds<F: Facilitator>(
         .await
         .map_err(|err| ErrorResponse::server_error(err, &payment_requirements))?;
 
-    let filtered: Vec<PaymentRequirements> = payment_requirements
+    Ok(filter_supported_kinds(&supported, payment_requirements))
+}
+
+/// Filters the payment requirements based on the supported kinds from the facilitator.
+///
+/// Returns only the payment requirements that are supported by the facilitator with updated extra fields.
+pub fn filter_supported_kinds(
+    supported: &FacilitatorSupportedResponse,
+    payment_requirements: Vec<PaymentRequirements>,
+) -> Vec<PaymentRequirements> {
+    payment_requirements
         .into_iter()
         .filter_map(|mut pr| {
             supported
@@ -92,12 +102,14 @@ pub async fn update_supported_kinds<F: Facilitator>(
                 .iter()
                 .find(|kind| kind.scheme == pr.scheme && kind.network == pr.network)
                 .and_then(|s| {
-                    pr.extra = s.extra.clone();
+                    // Update extra field if present
+                    if s.extra.is_some() {
+                        pr.extra = s.extra.clone();
+                    }
                     Some(pr)
                 })
         })
-        .collect();
-    Ok(filtered)
+        .collect()
 }
 
 /// Selects the appropriate payment requirements based on the provided payment payload.
@@ -299,4 +311,161 @@ pub async fn process_payment_no_settle<F: Facilitator>(
     .await?;
 
     Ok(verify_response)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::toolkit::http_server::filter_supported_kinds;
+
+    #[test]
+    fn test_filter_supported_kinds() {
+        let supported = serde_json::from_str(
+            "{
+  \"kinds\": [
+    {
+      \"x402Version\": 1,
+      \"scheme\": \"exact\",
+      \"network\": \"base-sepolia\"
+    },
+    {
+      \"x402Version\": 1,
+      \"scheme\": \"exact\",
+      \"network\": \"base\"
+    },
+    {
+      \"x402Version\": 1,
+      \"scheme\": \"exact\",
+      \"network\": \"my-mock-network\",
+      \"extra\": {
+        \"mockField\": \"mockValue\"
+      }
+    },
+    {
+      \"x402Version\": 1,
+      \"scheme\": \"exact\",
+      \"network\": \"solana-devnet\",
+      \"extra\": {
+        \"feePayer\": \"2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4\"
+      }
+    },
+    {
+      \"x402Version\": 1,
+      \"scheme\": \"exact\",
+      \"network\": \"solana\",
+      \"extra\": {
+        \"feePayer\": \"2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4\"
+      }
+    }
+  ]
+}",
+        )
+        .unwrap();
+
+        // EVM chains: "supported" doesn't include "extra" field, but payment requirements do
+        let payment_requirements = serde_json::from_str(
+            "[
+    {
+      \"scheme\": \"exact\",
+      \"network\": \"base\",
+      \"maxAmountRequired\": \"100\",
+      \"resource\": \"https://devnet.aimo.network/api/v1/chat/completions\",
+      \"description\": \"LLM Generation endpoint\",
+      \"mimeType\": \"application/json\",
+      \"payTo\": \"0xD14cE79C13CE71a853eF3E8BD75969d4BDEE39c1\",
+      \"maxTimeoutSeconds\": 60,
+      \"asset\": \"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913\",
+      \"outputSchema\": {
+        \"input\": {
+          \"discoverable\": true,
+          \"type\": \"http\",
+          \"method\": \"post\"
+        }
+      },
+      \"extra\": {
+        \"name\": \"USD Coin\",
+        \"version\": \"2\"
+      }
+    }
+  ]",
+        )
+        .unwrap();
+
+        // Expect the final filtered item to include the "extra" field from payment requirements
+        let filtered = filter_supported_kinds(&supported, payment_requirements);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(
+            filtered[0].extra,
+            Some(serde_json::json!({"name": "USD Coin", "version": "2"}))
+        );
+
+        // Solana chains: "supported" includes "extra" field, which should override payment requirements
+        let payment_requirements_solana = serde_json::from_str(
+            "[
+    {
+      \"scheme\": \"exact\",
+      \"network\": \"solana\",
+      \"maxAmountRequired\": \"100\",
+      \"resource\": \"https://devnet.aimo.network/api/v1/chat/completions\",
+      \"description\": \"LLM Generation endpoint\",
+      \"mimeType\": \"application/json\",
+      \"payTo\": \"Ge3jkza5KRfXvaq3GELNLh6V1pjjdEKNpEdGXJgjjKUR\",
+      \"maxTimeoutSeconds\": 60,
+      \"asset\": \"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v\",
+      \"outputSchema\": {
+        \"input\": {
+          \"discoverable\": true,
+          \"type\": \"http\",
+          \"method\": \"post\"
+        }
+      }
+    }
+  ]",
+        )
+        .unwrap();
+
+        // Expect the final filtered item to include the "extra" field from supported kinds
+        let filtered = filter_supported_kinds(&supported, payment_requirements_solana);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(
+            filtered[0].extra,
+            Some(serde_json::json!({"feePayer": "2wKupLR9q6wXYppw8Gr2NvWxKBUqm4PPJKkQfoxHDBg4"}))
+        );
+
+        // Mock network: "supported" includes "extra" field, which should override payment requirements
+        let payment_requirements_mock = serde_json::from_str(
+            "[
+    {
+      \"scheme\": \"exact\",
+      \"network\": \"my-mock-network\",
+      \"maxAmountRequired\": \"100\",
+      \"resource\": \"https://devnet.aimo.network/api/v1/chat/completions\",
+      \"description\": \"LLM Generation endpoint\",
+      \"mimeType\": \"application/json\",
+      \"payTo\": \"0xD14cE79C13CE71a853eF3E8BD75969d4BDEE39c1\",
+      \"maxTimeoutSeconds\": 60,
+      \"asset\": \"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913\",
+      \"outputSchema\": {
+        \"input\": {
+          \"discoverable\": true,
+          \"type\": \"http\",
+          \"method\": \"post\"
+        }
+      },
+      \"extra\": {
+        \"name\": \"USD Coin\",
+        \"version\": \"2\"
+      }
+    }
+  ]",
+        )
+        .unwrap();
+
+        // Expect the final filtered item to include the "extra" field from supported kinds
+        let filtered = filter_supported_kinds(&supported, payment_requirements_mock);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(
+            filtered[0].extra,
+            Some(serde_json::json!({"mockField": "mockValue"}))
+        );
+    }
 }
