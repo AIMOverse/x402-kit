@@ -120,11 +120,31 @@ impl Address for SvmAddress {
 
 pub type SvmAsset = crate::concepts::Asset<SvmAddress>;
 
+pub trait ExplicitSvmNetwork {
+    const NETWORK: SvmNetwork;
+}
+
+pub trait ExplicitSvmAsset {
+    const ASSET: SvmAsset;
+}
+
 pub mod networks {
     use super::*;
 
-    pub const SOLANA: SvmNetwork = SvmNetwork("solana");
-    pub const SOLANA_DEVNET: SvmNetwork = SvmNetwork("solana-devnet");
+    pub struct Solana;
+    impl ExplicitSvmNetwork for Solana {
+        const NETWORK: SvmNetwork = SvmNetwork("solana");
+    }
+
+    pub struct SolanaDevnet;
+    impl ExplicitSvmNetwork for SolanaDevnet {
+        const NETWORK: SvmNetwork = SvmNetwork("solana-devnet");
+    }
+
+    pub struct SolanaTestnet;
+    impl ExplicitSvmNetwork for SolanaTestnet {
+        const NETWORK: SvmNetwork = SvmNetwork("solana-testnet");
+    }
 }
 
 pub mod assets {
@@ -143,8 +163,15 @@ pub mod assets {
         };
     }
 
-    pub const USDC_SOLANA: SvmAsset =
-        create_usdc!(pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"));
-    pub const USDC_SOLANA_DEVNET: SvmAsset =
-        create_usdc!(pubkey!("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"));
+    pub struct UsdcSolana;
+    impl ExplicitSvmAsset for UsdcSolana {
+        const ASSET: SvmAsset =
+            create_usdc!(pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"));
+    }
+
+    pub struct UsdcSolanaDevnet;
+    impl ExplicitSvmAsset for UsdcSolanaDevnet {
+        const ASSET: SvmAsset =
+            create_usdc!(pubkey!("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"));
+    }
 }
