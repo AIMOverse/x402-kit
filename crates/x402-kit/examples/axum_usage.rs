@@ -12,7 +12,7 @@ use x402_kit::{
     config::Resource,
     facilitator_client::{IntoSettleResponse, RemoteFacilitatorClient},
     networks::evm::assets::{UsdcBase, UsdcBaseSepolia},
-    schemes::exact_evm::ExactEvmConfig,
+    schemes::exact_evm::ExactEvm,
     toolkit::http_server::process_payment,
     transport::{
         Base64EncodedHeader, FacilitatorPaymentRequest, FacilitatorSettleFailed,
@@ -70,7 +70,7 @@ async fn premium_content(
 
     // Define payment requirements for each transport
     // You can customize anything here as needed per request
-    let payment_requirements = ExactEvmConfig::builder()
+    let payment_requirements = ExactEvm::builder()
         .asset(UsdcBase)
         .amount(500) // amount in smallest units
         .pay_to(alloy_primitives::address!(
@@ -136,7 +136,7 @@ async fn facilitator_types_override(
         .mime_type("application/json")
         .build();
 
-    let payment_requirements = ExactEvmConfig::builder()
+    let payment_requirements = ExactEvm::builder()
         .asset(UsdcBaseSepolia)
         .amount(500) // amount in smallest units
         .pay_to(alloy_primitives::address!(

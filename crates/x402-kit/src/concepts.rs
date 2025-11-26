@@ -1,6 +1,6 @@
 //! Core traits and types used across the X402 Kit.
 
-use std::{fmt::Display, marker::PhantomData, str::FromStr};
+use std::{fmt::Display, str::FromStr};
 
 use url::Url;
 
@@ -35,16 +35,15 @@ pub trait Scheme {
     fn scheme_name(&self) -> &str;
     fn network(&self) -> &Self::Network;
 
-    fn select_payment_requirements<A: Address<Network = Self::Network>>(
+    fn select<A: Address<Network = Self::Network>>(
         &self,
         pr: &PaymentRequirements,
-    ) -> Option<SelectedPaymentRequirements<Self, A>>
+    ) -> Option<PaymentSelection<A>>
     where
         Self: Sized,
     {
         if pr.scheme == self.scheme_name() && pr.network == self.network().network_name() {
-            Some(SelectedPaymentRequirements {
-                scheme: PhantomData,
+            Some(PaymentSelection {
                 max_amount_required: pr.max_amount_required,
                 resource: pr.resource.clone(),
                 description: pr.description.clone(),
@@ -72,12 +71,7 @@ pub struct Asset<A: Address> {
 
 /// Selected payment requirements for a given scheme and address type.
 #[derive(Debug, Clone)]
-pub struct SelectedPaymentRequirements<S, A>
-where
-    S: Scheme,
-    A: Address<Network = S::Network>,
-{
-    pub scheme: PhantomData<S>,
+pub struct PaymentSelection<A: Address> {
     /// Maximum amount required for the payment in smallest units
     pub max_amount_required: AmountValue,
     /// Resource URL to fetch payment details
@@ -105,7 +99,7 @@ pub trait SchemeSigner {
 
     fn sign<A: Address<Network = <Self::Scheme as Scheme>::Network>>(
         &self,
-        selected: &SelectedPaymentRequirements<Self::Scheme, A>,
+        selected: &PaymentSelection<A>,
     ) -> impl Future<Output = Result<<Self::Scheme as Scheme>::Payload, Self::Error>>;
 }
 

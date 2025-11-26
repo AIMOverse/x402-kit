@@ -11,7 +11,6 @@ use crate::{
 
 use std::{
     fmt::{Debug, Display},
-    marker::PhantomData,
     str::FromStr,
 };
 
@@ -118,23 +117,15 @@ pub struct ExactEvmAuthorization {
     pub nonce: Nonce,
 }
 
-#[derive(Debug, Clone)]
-pub struct ExactEvmScheme {
-    pub network: EvmNetwork,
-}
-
-impl ExactEvmScheme {
-    pub fn with_network(network: EvmNetwork) -> Self {
-        ExactEvmScheme { network }
-    }
-}
+/// Exact EVM Scheme information holder
+pub struct ExactEvmScheme(pub EvmNetwork);
 
 impl Scheme for ExactEvmScheme {
     type Network = EvmNetwork;
     type Payload = ExactEvmPayload;
 
     fn network(&self) -> &Self::Network {
-        &self.network
+        &self.0
     }
 
     fn scheme_name(&self) -> &str {
@@ -143,9 +134,7 @@ impl Scheme for ExactEvmScheme {
 }
 
 #[derive(Builder, Debug, Clone)]
-pub struct ExactEvmConfig<N: ExplicitEvmNetwork, A: ExplicitEvmAsset<NETWORK = N>> {
-    #[builder(default)]
-    pub phantom: PhantomData<N>,
+pub struct ExactEvm<A: ExplicitEvmAsset> {
     pub asset: A,
     #[builder(into)]
     pub pay_to: EvmAddress,
@@ -155,14 +144,10 @@ pub struct ExactEvmConfig<N: ExplicitEvmNetwork, A: ExplicitEvmAsset<NETWORK = N
     pub extra_override: Option<Any>,
 }
 
-impl<N, A> ExactEvmConfig<N, A>
-where
-    N: ExplicitEvmNetwork,
-    A: ExplicitEvmAsset<NETWORK = N>,
-{
+impl<A: ExplicitEvmAsset> ExactEvm<A> {
     pub fn into_config(self) -> PaymentRequirementsConfig<ExactEvmScheme, EvmAddress> {
         PaymentRequirementsConfig {
-            scheme: ExactEvmScheme::with_network(N::NETWORK),
+            scheme: ExactEvmScheme(A::Network::NETWORK),
             transport: TransportConfig {
                 pay_to: self.pay_to,
                 asset: A::ASSET,
@@ -198,7 +183,7 @@ mod tests {
             .description("Payment for services".to_string())
             .mime_type("application/json".to_string())
             .build();
-        let config = ExactEvmConfig::builder()
+        let config = ExactEvm::builder()
             .asset(UsdcBaseSepolia)
             .amount(1000)
             .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
@@ -221,7 +206,7 @@ mod tests {
             .description("Payment for services".to_string())
             .mime_type("application/json".to_string())
             .build();
-        let pr = ExactEvmConfig::builder()
+        let pr = ExactEvm::builder()
             .asset(UsdcBaseSepolia)
             .amount(1000)
             .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
@@ -235,7 +220,7 @@ mod tests {
             serde_json::to_value(UsdcBaseSepolia::EIP712_DOMAIN).ok()
         );
 
-        let pr = ExactEvmConfig::builder()
+        let pr = ExactEvm::builder()
             .asset(UsdcBaseSepolia)
             .amount(1000)
             .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))

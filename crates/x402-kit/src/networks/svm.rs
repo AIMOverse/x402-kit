@@ -125,6 +125,7 @@ pub trait ExplicitSvmNetwork {
 }
 
 pub trait ExplicitSvmAsset {
+    type Network: ExplicitSvmNetwork;
     const ASSET: SvmAsset;
 }
 
@@ -165,12 +166,14 @@ pub mod assets {
 
     pub struct UsdcSolana;
     impl ExplicitSvmAsset for UsdcSolana {
+        type Network = networks::Solana;
         const ASSET: SvmAsset =
             create_usdc!(pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"));
     }
 
     pub struct UsdcSolanaDevnet;
     impl ExplicitSvmAsset for UsdcSolanaDevnet {
+        type Network = networks::SolanaDevnet;
         const ASSET: SvmAsset =
             create_usdc!(pubkey!("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"));
     }

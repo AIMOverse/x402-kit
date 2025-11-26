@@ -132,7 +132,7 @@ pub struct Eip712Domain {
 }
 
 pub trait ExplicitEvmAsset {
-    type NETWORK: ExplicitEvmNetwork;
+    type Network: ExplicitEvmNetwork;
 
     const ASSET: EvmAsset;
     const EIP712_DOMAIN: Option<Eip712Domain>;
@@ -224,7 +224,7 @@ pub mod assets {
             pub struct $struct_name;
 
             impl ExplicitEvmAsset for $struct_name {
-                type NETWORK = $network_struct;
+                type Network = $network_struct;
 
                 const ASSET: EvmAsset = EvmAsset {
                     address: EvmAddress(address!($addr)),
