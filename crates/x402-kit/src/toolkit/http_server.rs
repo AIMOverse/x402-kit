@@ -29,35 +29,35 @@ impl ErrorResponse {
         }
     }
 
-    pub fn payment_required(accepts: &Vec<PaymentRequirements>) -> Self {
+    pub fn payment_required(accepts: &[PaymentRequirements]) -> Self {
         ErrorResponse {
             status: 402,
             error: "X-PAYMENT header is required".to_string(),
-            accepts: accepts.clone(),
+            accepts: accepts.to_owned(),
         }
     }
 
-    pub fn invalid_payment(error: impl Display, accepts: &Vec<PaymentRequirements>) -> Self {
+    pub fn invalid_payment(error: impl Display, accepts: &[PaymentRequirements]) -> Self {
         ErrorResponse {
             status: 400,
             error: error.to_string(),
-            accepts: accepts.clone(),
+            accepts: accepts.to_owned(),
         }
     }
 
-    pub fn payment_failed(error: impl Display, accepts: &Vec<PaymentRequirements>) -> Self {
+    pub fn payment_failed(error: impl Display, accepts: &[PaymentRequirements]) -> Self {
         ErrorResponse {
             status: 402,
             error: error.to_string(),
-            accepts: accepts.clone(),
+            accepts: accepts.to_owned(),
         }
     }
 
-    pub fn server_error(error: impl Display, accepts: &Vec<PaymentRequirements>) -> Self {
+    pub fn server_error(error: impl Display, accepts: &[PaymentRequirements]) -> Self {
         ErrorResponse {
             status: 500,
             error: error.to_string(),
-            accepts: accepts.clone(),
+            accepts: accepts.to_owned(),
         }
     }
 }
@@ -65,7 +65,7 @@ impl ErrorResponse {
 /// Extracts the payment payload from the raw X-Payment-Header.
 pub fn extract_payment_payload(
     raw_x_payment_header: Option<&str>,
-    payment_requirements: &Vec<PaymentRequirements>,
+    payment_requirements: &[PaymentRequirements],
 ) -> Result<Base64EncodedHeader, ErrorResponse> {
     Ok(Base64EncodedHeader(
         raw_x_payment_header
@@ -114,7 +114,7 @@ pub fn filter_supported_kinds(
 
 /// Selects the appropriate payment requirements based on the provided payment payload.
 pub fn select_payment_with_payload(
-    payment_requirements: &Vec<PaymentRequirements>,
+    payment_requirements: &[PaymentRequirements],
     x_payment_header: &Base64EncodedHeader,
 ) -> Result<PaymentRequirements, ErrorResponse> {
     let payment_payload = PaymentPayload::try_from(x_payment_header.clone())
@@ -135,7 +135,7 @@ pub async fn verify_payment<F: Facilitator>(
     facilitator: &F,
     x_payment_header: &Base64EncodedHeader,
     selected: &PaymentRequirements,
-    payment_requirements: &Vec<PaymentRequirements>,
+    payment_requirements: &[PaymentRequirements],
 ) -> Result<FacilitatorVerifyValid, ErrorResponse> {
     let payment_payload = x_payment_header
         .clone()
@@ -184,7 +184,7 @@ pub async fn settle_payment<F: Facilitator>(
     facilitator: &F,
     x_payment_header: &Base64EncodedHeader,
     selected: &PaymentRequirements,
-    payment_requirements: &Vec<PaymentRequirements>,
+    payment_requirements: &[PaymentRequirements],
 ) -> Result<FacilitatorSettleSuccess, ErrorResponse> {
     let payment_payload = x_payment_header
         .clone()
