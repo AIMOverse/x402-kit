@@ -115,6 +115,12 @@ impl<'de> Deserialize<'de> for EvmSignature {
     }
 }
 
+impl From<alloy_primitives::Signature> for EvmSignature {
+    fn from(sig: alloy_primitives::Signature) -> Self {
+        EvmSignature(sig)
+    }
+}
+
 impl Signature for EvmSignature {
     type Network = EvmNetwork;
 }

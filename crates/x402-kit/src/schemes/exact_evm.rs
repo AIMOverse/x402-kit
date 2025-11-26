@@ -15,7 +15,7 @@ use std::{
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Nonce([u8; 32]);
+pub struct Nonce(pub [u8; 32]);
 
 impl Debug for Nonce {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -65,7 +65,7 @@ impl<'de> Deserialize<'de> for Nonce {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-pub struct TimestampSeconds(pub i64);
+pub struct TimestampSeconds(pub u64);
 
 impl Display for TimestampSeconds {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -94,7 +94,7 @@ impl<'de> Deserialize<'de> for TimestampSeconds {
         D: serde::Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        let seconds = s.parse::<i64>().map_err(serde::de::Error::custom)?;
+        let seconds = s.parse::<u64>().map_err(serde::de::Error::custom)?;
         Ok(TimestampSeconds(seconds))
     }
 }

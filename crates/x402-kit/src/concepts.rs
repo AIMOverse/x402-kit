@@ -93,11 +93,11 @@ pub struct PaymentSelection<A: Address> {
 }
 
 /// Signer for a given payment scheme.
-pub trait SchemeSigner {
+pub trait SchemeSigner<A: Address<Network = <Self::Scheme as Scheme>::Network>> {
     type Scheme: Scheme;
     type Error: std::error::Error;
 
-    fn sign<A: Address<Network = <Self::Scheme as Scheme>::Network>>(
+    fn sign(
         &self,
         selected: &PaymentSelection<A>,
     ) -> impl Future<Output = Result<<Self::Scheme as Scheme>::Payload, Self::Error>>;
