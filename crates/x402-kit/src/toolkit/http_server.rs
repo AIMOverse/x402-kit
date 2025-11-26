@@ -101,12 +101,12 @@ pub fn filter_supported_kinds(
                 .kinds
                 .iter()
                 .find(|kind| kind.scheme == pr.scheme && kind.network == pr.network)
-                .and_then(|s| {
+                .map(|s| {
                     // Update extra field if present
                     if s.extra.is_some() {
                         pr.extra = s.extra.clone();
                     }
-                    Some(pr)
+                    pr
                 })
         })
         .collect()
@@ -118,7 +118,7 @@ pub fn select_payment_with_payload(
     x_payment_header: &Base64EncodedHeader,
 ) -> Result<PaymentRequirements, ErrorResponse> {
     let payment_payload = PaymentPayload::try_from(x_payment_header.clone())
-        .map_err(|err| ErrorResponse::invalid_payment(err, &payment_requirements))?;
+        .map_err(|err| ErrorResponse::invalid_payment(err, payment_requirements))?;
 
     payment_requirements
         .iter()
@@ -140,7 +140,7 @@ pub async fn verify_payment<F: Facilitator>(
     let payment_payload = x_payment_header
         .clone()
         .try_into()
-        .map_err(|err| ErrorResponse::invalid_payment(err, &payment_requirements))?;
+        .map_err(|err| ErrorResponse::invalid_payment(err, payment_requirements))?;
 
     tracing::debug!(
         "Verifying payment for scheme={}, network={}",
@@ -162,7 +162,7 @@ pub async fn verify_payment<F: Facilitator>(
     let verify_response = facilitator
         .verify(request)
         .await
-        .map_err(|err| ErrorResponse::server_error(err, &payment_requirements))?;
+        .map_err(|err| ErrorResponse::server_error(err, payment_requirements))?;
 
     match verify_response {
         FacilitatorVerifyResponse::Valid(valid) => Ok(valid),
@@ -174,7 +174,7 @@ pub async fn verify_payment<F: Facilitator>(
                 "Invalid payment: reason='{invalid_reason}', payer={}",
                 payer.unwrap_or("[Unknown]".to_string())
             ),
-            &payment_requirements,
+            payment_requirements,
         )),
     }
 }
@@ -189,7 +189,7 @@ pub async fn settle_payment<F: Facilitator>(
     let payment_payload = x_payment_header
         .clone()
         .try_into()
-        .map_err(|err| ErrorResponse::invalid_payment(err, &payment_requirements))?;
+        .map_err(|err| ErrorResponse::invalid_payment(err, payment_requirements))?;
 
     let settle_response: FacilitatorSettleResponse = facilitator
         .settle(FacilitatorPaymentRequest {
@@ -203,8 +203,7 @@ pub async fn settle_payment<F: Facilitator>(
             },
         })
         .await
-        .map_err(|err| ErrorResponse::server_error(err, &payment_requirements))?
-        .into();
+        .map_err(|err| ErrorResponse::server_error(err, payment_requirements))?;
 
     match settle_response {
         FacilitatorSettleResponse::Success(success) => Ok(success),
@@ -217,7 +216,7 @@ pub async fn settle_payment<F: Facilitator>(
                 error_reason,
                 payer.unwrap_or("[Unknown]".to_string())
             ),
-            &payment_requirements,
+            payment_requirements,
         )),
     }
 }

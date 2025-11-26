@@ -15,7 +15,7 @@ pub struct EvmNetwork {
 
 impl NetworkFamily for EvmNetwork {
     fn network_name(&self) -> &str {
-        &self.name
+        self.name
     }
 }
 
@@ -39,7 +39,7 @@ impl FromStr for EvmAddress {
 
 impl Display for EvmAddress {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0.to_string())
+        write!(f, "{}", self.0)
     }
 }
 
@@ -77,7 +77,7 @@ pub struct EvmSignature(pub alloy_primitives::Signature);
 
 impl Display for EvmSignature {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0.to_string())
+        write!(f, "{}", self.0)
     }
 }
 
