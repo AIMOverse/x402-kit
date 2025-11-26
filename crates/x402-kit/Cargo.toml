@@ -17,14 +17,12 @@ log-tracing = ["tracing"]
 hex = { version = "0.4" }
 alloy-primitives = { version = "1.4" }
 bon = { version = "3.8" }
-# crypto-bigint = { version = "0.6", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0", features = ["preserve_order"] }
 thiserror = { version = "2.0" }
 url = { version = "2.5" }
 solana-pubkey = { version = "4.0" }
 solana-signature = { version = "3.1" }
-chrono = { version = "0.4", default-features = false, features = ["std"] }
 base64 = { version = "0.22" }
 
 # === Feature "tracing" ===
