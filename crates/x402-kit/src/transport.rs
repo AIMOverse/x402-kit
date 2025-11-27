@@ -158,6 +158,17 @@ pub struct PaymentResponse {
     pub payer: String,
 }
 
+impl From<FacilitatorSettleSuccess> for PaymentResponse {
+    fn from(success: FacilitatorSettleSuccess) -> Self {
+        PaymentResponse {
+            success: true,
+            transaction: success.transaction,
+            network: success.network,
+            payer: success.payer,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Base64EncodedHeader(pub String);
 

@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use http::{HeaderMap, StatusCode};
+
 use crate::{
     concepts::Facilitator,
     transport::{
@@ -15,7 +17,7 @@ use crate::{
 /// Structured error response for payment processing.
 #[derive(Debug, Clone)]
 pub struct ErrorResponse {
-    pub status: u16,
+    pub status: StatusCode,
     pub error: String,
     pub accepts: Vec<PaymentRequirements>,
 }
@@ -31,7 +33,7 @@ impl ErrorResponse {
 
     pub fn payment_required(accepts: &[PaymentRequirements]) -> Self {
         ErrorResponse {
-            status: 402,
+            status: StatusCode::PAYMENT_REQUIRED,
             error: "X-PAYMENT header is required".to_string(),
             accepts: accepts.to_owned(),
         }
@@ -39,7 +41,7 @@ impl ErrorResponse {
 
     pub fn invalid_payment(error: impl Display, accepts: &[PaymentRequirements]) -> Self {
         ErrorResponse {
-            status: 400,
+            status: StatusCode::BAD_REQUEST,
             error: error.to_string(),
             accepts: accepts.to_owned(),
         }
@@ -47,7 +49,7 @@ impl ErrorResponse {
 
     pub fn payment_failed(error: impl Display, accepts: &[PaymentRequirements]) -> Self {
         ErrorResponse {
-            status: 402,
+            status: StatusCode::PAYMENT_REQUIRED,
             error: error.to_string(),
             accepts: accepts.to_owned(),
         }
@@ -55,7 +57,7 @@ impl ErrorResponse {
 
     pub fn server_error(error: impl Display, accepts: &[PaymentRequirements]) -> Self {
         ErrorResponse {
-            status: 500,
+            status: StatusCode::INTERNAL_SERVER_ERROR,
             error: error.to_string(),
             accepts: accepts.to_owned(),
         }
@@ -64,12 +66,20 @@ impl ErrorResponse {
 
 /// Extracts the payment payload from the raw X-Payment-Header.
 pub fn extract_payment_payload(
-    raw_x_payment_header: Option<&str>,
+    headers: &HeaderMap,
     payment_requirements: &[PaymentRequirements],
 ) -> Result<Base64EncodedHeader, ErrorResponse> {
     Ok(Base64EncodedHeader(
-        raw_x_payment_header
+        headers
+            .get("X-Payment")
             .ok_or(ErrorResponse::payment_required(payment_requirements))?
+            .to_str()
+            .map_err(|err| {
+                ErrorResponse::invalid_payment(
+                    format!("Failed to parse X-Payment header: {}", err),
+                    payment_requirements,
+                )
+            })?
             .to_string(),
     ))
 }
@@ -224,10 +234,10 @@ pub async fn settle_payment<F: Facilitator>(
 /// Entrypoint for processing a payment.
 pub async fn process_payment<F: Facilitator>(
     facilitator: &F,
-    raw_x_payment_header: Option<&str>,
+    headers: &HeaderMap,
     payment_requirements: Vec<PaymentRequirements>,
 ) -> Result<PaymentResponse, ErrorResponse> {
-    let x_payment_header = extract_payment_payload(raw_x_payment_header, &payment_requirements)?;
+    let x_payment_header = extract_payment_payload(headers, &payment_requirements)?;
     let selected = select_payment_with_payload(&payment_requirements, &x_payment_header)?;
 
     // Allow unused variables when tracing is disabled
@@ -270,11 +280,11 @@ pub async fn process_payment<F: Facilitator>(
 /// Entrypoint for processing a payment, without verification.
 pub async fn process_payment_no_verify<F: Facilitator>(
     facilitator: &F,
-    raw_x_payment_header: Option<&str>,
+    headers: &HeaderMap,
     payment_requirements: Vec<PaymentRequirements>,
 ) -> Result<PaymentResponse, ErrorResponse> {
     let updated_requirements = update_supported_kinds(facilitator, payment_requirements).await?;
-    let x_payment_header = extract_payment_payload(raw_x_payment_header, &updated_requirements)?;
+    let x_payment_header = extract_payment_payload(headers, &updated_requirements)?;
     let selected = select_payment_with_payload(&updated_requirements, &x_payment_header)?;
 
     let settle_response = settle_payment(
@@ -296,11 +306,11 @@ pub async fn process_payment_no_verify<F: Facilitator>(
 /// Entrypoint for processing a payment, without settlement.
 pub async fn process_payment_no_settle<F: Facilitator>(
     facilitator: &F,
-    raw_x_payment_header: Option<&str>,
+    headers: &HeaderMap,
     payment_requirements: Vec<PaymentRequirements>,
 ) -> Result<FacilitatorVerifyValid, ErrorResponse> {
     let updated_requirements = update_supported_kinds(facilitator, payment_requirements).await?;
-    let x_payment_header = extract_payment_payload(raw_x_payment_header, &updated_requirements)?;
+    let x_payment_header = extract_payment_payload(headers, &updated_requirements)?;
     let selected = select_payment_with_payload(&updated_requirements, &x_payment_header)?;
 
     let verify_response = verify_payment(

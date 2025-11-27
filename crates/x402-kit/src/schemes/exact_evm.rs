@@ -160,9 +160,12 @@ impl<A: ExplicitEvmAsset> ExactEvm<A> {
                 .or(A::EIP712_DOMAIN.and_then(|v| serde_json::to_value(v).ok())),
         }
     }
+}
 
-    pub fn into_payment_requirements(self) -> PaymentRequirements {
-        self.into_config().into()
+impl<A: ExplicitEvmAsset> From<ExactEvm<A>> for PaymentRequirements {
+    /// Build PaymentRequirements from ExactEvm configuration
+    fn from(exact_evm: ExactEvm<A>) -> Self {
+        exact_evm.into_config().into()
     }
 }
 
@@ -183,13 +186,13 @@ mod tests {
             .description("Payment for services".to_string())
             .mime_type("application/json".to_string())
             .build();
-        let config = ExactEvm::builder()
+        let scheme = ExactEvm::builder()
             .asset(UsdcBaseSepolia)
             .amount(1000)
             .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
             .resource(resource)
             .build();
-        let payment_requirements = config.into_payment_requirements();
+        let payment_requirements = PaymentRequirements::from(scheme);
 
         assert_eq!(payment_requirements.scheme, "exact");
         assert_eq!(
@@ -206,13 +209,13 @@ mod tests {
             .description("Payment for services".to_string())
             .mime_type("application/json".to_string())
             .build();
-        let pr = ExactEvm::builder()
+        let pr: PaymentRequirements = ExactEvm::builder()
             .asset(UsdcBaseSepolia)
             .amount(1000)
             .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
             .resource(resource.clone())
             .build()
-            .into_payment_requirements();
+            .into();
 
         assert!(pr.extra.is_some());
         assert_eq!(
@@ -220,14 +223,14 @@ mod tests {
             serde_json::to_value(UsdcBaseSepolia::EIP712_DOMAIN).ok()
         );
 
-        let pr = ExactEvm::builder()
+        let pr: PaymentRequirements = ExactEvm::builder()
             .asset(UsdcBaseSepolia)
             .amount(1000)
             .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
             .resource(resource)
             .extra_override(json!({"foo": "bar"}))
             .build()
-            .into_payment_requirements();
+            .into();
 
         assert_eq!(pr.extra, Some(json!({"foo": "bar"})));
     }

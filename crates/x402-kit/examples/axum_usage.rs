@@ -78,30 +78,22 @@ async fn premium_content(
         ))
         .resource(resource)
         .build()
-        .into_payment_requirements();
+        .into();
 
     // Create facilitator client
     let facilitator = RemoteFacilitatorClient::new_default(facilitator_url);
 
     // We won't generate ANY errors until here - Everything checked at compile time
 
-    // Extract payment header
-    let raw_x_payment_header = req.headers().get("X-Payment").map(|v| v.to_str().unwrap());
-    tracing::debug!("Processing payment with header: {:?}", raw_x_payment_header);
-
     // Process payment with the utility function
-    let result = process_payment(
-        &facilitator,
-        raw_x_payment_header,
-        vec![payment_requirements],
-    )
-    .await
-    .map_err(|err| {
-        (
-            StatusCode::from_u16(err.status).unwrap(),
-            Json(serde_json::to_value(err.into_payment_requirements_response()).unwrap()),
-        )
-    })?;
+    let result = process_payment(&facilitator, req.headers(), vec![payment_requirements])
+        .await
+        .map_err(|err| {
+            (
+                err.status,
+                Json(serde_json::to_value(err.into_payment_requirements_response()).unwrap()),
+            )
+        })?;
 
     tracing::debug!("Payment processing result {:?}", result);
 
@@ -144,7 +136,7 @@ async fn facilitator_types_override(
         ))
         .resource(resource)
         .build()
-        .into_payment_requirements();
+        .into();
 
     // Define custom response types
 
@@ -204,12 +196,7 @@ async fn facilitator_types_override(
     let raw_x_payment_header = req.headers().get("X-Payment").map(|v| v.to_str().unwrap());
     println!("Processing payment with header: {:?}", raw_x_payment_header);
 
-    let result = process_payment(
-        &facilitator,
-        raw_x_payment_header,
-        vec![payment_requirements],
-    )
-    .await;
+    let result = process_payment(&facilitator, req.headers(), vec![payment_requirements]).await;
     println!("Payment processing result {:?}", result);
 
     match result {
@@ -218,7 +205,7 @@ async fn facilitator_types_override(
         }
         Err(err) => {
             return (
-                StatusCode::from_u16(err.status).unwrap(),
+                err.status,
                 Json(serde_json::to_value(err.into_payment_requirements_response()).unwrap()),
             );
         }
