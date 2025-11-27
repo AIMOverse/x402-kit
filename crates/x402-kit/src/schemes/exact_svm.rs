@@ -16,8 +16,6 @@ pub struct ExactSvm<A: ExplicitSvmAsset> {
     pub amount: u64,
     pub max_timeout_seconds_override: Option<u64>,
     pub resource: Resource,
-    #[builder(into)]
-    pub fee_payer: SvmAddress,
 }
 
 impl<A: ExplicitSvmAsset> ExactSvm<A> {
@@ -31,7 +29,8 @@ impl<A: ExplicitSvmAsset> ExactSvm<A> {
                 .max_timeout_seconds(self.max_timeout_seconds_override.unwrap_or(60))
                 .resource(self.resource)
                 .build(),
-            extra: Some(serde_json::json!({ "feePayer": self.fee_payer.to_string() })),
+            // Fee payer should be updated with facilitator's supported networks list
+            extra: None,
         }
     }
 
@@ -56,8 +55,7 @@ impl Scheme for ExactSvmScheme {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExplicitSvmPayload {
-    #[serde(rename = "transaction")]
-    pub encoded_transaction: String,
+    pub transaction: String,
 }
 
 #[cfg(test)]
@@ -79,7 +77,6 @@ mod tests {
         let config = ExactSvm::builder()
             .asset(UsdcSolanaDevnet)
             .amount(1000)
-            .fee_payer(pubkey!("JB63cv6eR67ntKaHQQufmgwDmxqZtX1ZwXgJCvcYKzC5"))
             .pay_to(pubkey!("Ge3jkza5KRfXvaq3GELNLh6V1pjjdEKNpEdGXJgjjKUR"))
             .resource(resource)
             .build()
@@ -92,11 +89,6 @@ mod tests {
             config.resource,
             Url::parse("https://example.com/payment").unwrap()
         );
-        assert_eq!(
-            config.extra,
-            Some(serde_json::json!({
-                "feePayer": "JB63cv6eR67ntKaHQQufmgwDmxqZtX1ZwXgJCvcYKzC5"
-            }))
-        );
+        assert!(config.extra.is_none());
     }
 }

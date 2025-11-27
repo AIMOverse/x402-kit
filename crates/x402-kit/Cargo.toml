@@ -8,10 +8,11 @@ license = "MIT"
 description = "A fully modular SDK for building complex X402 payment integrations."
 
 [features]
-default = ["facilitator-client", "log-tracing", "evm-signer"]
-facilitator-client = ["reqwest"]
-log-tracing = ["tracing"]
-evm-signer = ["alloy-core", "alloy-signer", "rand"]
+default = ["facilitator-client", "tracing", "evm-signer", "svm-signer"]
+facilitator-client = ["dep:reqwest"]
+tracing = ["dep:tracing"]
+evm-signer = ["dep:alloy-core", "dep:alloy-signer", "dep:rand"]
+svm-signer = ["dep:bincode"]
 
 [dependencies]
 # === Core Deps ===
@@ -36,6 +37,9 @@ reqwest = { version = "0.12", optional = true, features = ["json"] }
 alloy-core = { version = "1.4", features = ["sol-types"], optional = true }
 alloy-signer = { version = "1.1", optional = true }
 rand = { version = "0.9", optional = true }
+
+# === Feature "svm-signer" ===
+bincode = { version = "2.0", features = ["serde"], optional = true }
 
 [dev-dependencies]
 url-macro = { version = "0.2" }

@@ -230,6 +230,8 @@ pub async fn process_payment<F: Facilitator>(
     let x_payment_header = extract_payment_payload(raw_x_payment_header, &payment_requirements)?;
     let selected = select_payment_with_payload(&payment_requirements, &x_payment_header)?;
 
+    // Allow unused variables when tracing is disabled
+    #[allow(unused_variables)]
     let valid = verify_payment(
         facilitator,
         &x_payment_header,
@@ -238,7 +240,7 @@ pub async fn process_payment<F: Facilitator>(
     )
     .await?;
 
-    #[cfg(feature = "log-tracing")]
+    #[cfg(feature = "tracing")]
     tracing::debug!("Payment verified for payer: {}", valid.payer);
 
     let settle_response = settle_payment(
@@ -249,7 +251,7 @@ pub async fn process_payment<F: Facilitator>(
     )
     .await?;
 
-    #[cfg(feature = "log-tracing")]
+    #[cfg(feature = "tracing")]
     tracing::debug!(
         "Payment settled: payer='{}', network='{}', transaction='{}'",
         settle_response.payer,
