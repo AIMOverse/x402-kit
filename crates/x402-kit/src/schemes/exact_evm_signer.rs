@@ -4,7 +4,7 @@ use alloy_core::{
 };
 use alloy_primitives::{FixedBytes, U256};
 use alloy_signer::{Error as AlloySignerError, Signer as AlloySigner};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::{
     concepts::{PaymentSelection, Scheme, SchemeSigner},
@@ -13,25 +13,6 @@ use crate::{
 };
 
 use std::{fmt::Debug, time::SystemTime};
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AssetEip712Domain {
-    pub name: String,
-    pub version: String,
-    pub chain_id: u64,
-    pub verifying_contract: EvmAddress,
-}
-
-impl From<AssetEip712Domain> for Eip712Domain {
-    fn from(asset_eip712_domain: AssetEip712Domain) -> Self {
-        eip712_domain! {
-            name: asset_eip712_domain.name.clone(),
-            version: asset_eip712_domain.version.clone(),
-            chain_id: asset_eip712_domain.chain_id,
-            verifying_contract: asset_eip712_domain.verifying_contract.0,
-        }
-    }
-}
 
 pub trait AuthorizationSigner {
     type Error: std::error::Error;
@@ -139,12 +120,12 @@ where
 
         let signer = &self.signer;
         let auth_clone = authorization.clone();
-        let domain = AssetEip712Domain {
+        let domain = eip712_domain!(
             name: eip712_domain_info.name,
             version: eip712_domain_info.version,
             chain_id: A::Network::NETWORK.chain_id,
-            verifying_contract: A::ASSET.address,
-        };
+            verifying_contract: A::ASSET.address.0,
+        );
         let signature = signer
             .sign_authorization(&auth_clone.into(), &domain.into())
             .await
@@ -202,11 +183,11 @@ mod tests {
         assert_eq!(payload.authorization.value, AmountValue(1000));
 
         // Verify the signature
-        let domain = AssetEip712Domain {
+        let domain = eip712_domain! {
             name: "USD Coin".to_string(),
             version: "2".to_string(),
             chain_id: BaseSepolia::NETWORK.chain_id,
-            verifying_contract: UsdcBaseSepolia::ASSET.address,
+            verifying_contract: UsdcBaseSepolia::ASSET.address.0,
         };
 
         let recovered_address = payload
