@@ -216,7 +216,10 @@ mod tests {
 
     use super::*;
 
-    async fn middleware_fn(req: Request, next: Next) -> Response {
+    async fn middleware_fn(
+        req: Request,
+        next: Next,
+    ) -> Result<PaymentSuccessResponse, PaymentErrorResponse> {
         PaymentHandler::builder(RemoteFacilitatorClient::new_default(url!(
             "https://facilitator.example.com"
         )))
@@ -234,14 +237,14 @@ mod tests {
                 )
                 .build(),
         )
+        .update_facilitator_supported()
+        .await?
         .build()
         .handle_payment()
         .req(req)
         .next(next)
         .call()
         .await
-        .map(|success| success.into_response())
-        .unwrap_or_else(|err| err.into_response())
     }
 
     #[test]
