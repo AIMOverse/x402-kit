@@ -13,7 +13,7 @@ use x402_kit::{
     facilitator_client::{IntoSettleResponse, RemoteFacilitatorClient},
     networks::evm::assets::{UsdcBase, UsdcBaseSepolia},
     schemes::exact_evm::ExactEvm,
-    toolkit::http_server::process_payment,
+    seller::process_payment,
     transport::{
         Base64EncodedHeader, FacilitatorPaymentRequest, FacilitatorSettleFailed,
         FacilitatorSettleResponse, FacilitatorSettleSuccess, PaymentPayload, PaymentRequirements,

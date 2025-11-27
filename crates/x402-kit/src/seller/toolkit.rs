@@ -316,7 +316,7 @@ pub async fn process_payment_no_settle<F: Facilitator>(
 
 #[cfg(test)]
 mod tests {
-    use crate::toolkit::http_server::filter_supported_kinds;
+    use super::*;
 
     #[test]
     fn test_filter_supported_kinds() {

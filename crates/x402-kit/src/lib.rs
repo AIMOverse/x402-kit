@@ -3,7 +3,7 @@ pub mod config;
 pub mod errors;
 pub mod networks;
 pub mod schemes;
-pub mod toolkit;
+pub mod seller;
 pub mod transport;
 pub mod types;
 
