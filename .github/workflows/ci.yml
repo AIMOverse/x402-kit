@@ -121,11 +121,9 @@ jobs:
           RUSTDOCFLAGS: -D warnings
 
   test-docs:
-    needs: check
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v6
     - uses: dtolnay/rust-toolchain@stable
     - name: Run doc tests
       run: cargo test --all-features --doc
-
