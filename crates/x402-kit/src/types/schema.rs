@@ -7,18 +7,27 @@ use crate::types::Record;
 #[serde(rename_all = "camelCase")]
 pub struct FieldDefinition {
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    #[builder(into)]
     pub field_type: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(into)]
     pub required: Option<FieldRequired>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(into)]
     pub description: Option<String>,
 
     #[serde(rename = "enum", skip_serializing_if = "Option::is_none")]
+    #[builder(with = |iter: impl for<'a> IntoIterator<Item = &'static str>| iter.into_iter().map(|s| s.to_string()).collect())]
     pub field_enum: Option<Vec<String>>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(with = |iter: impl IntoIterator<Item = (&'static str, FieldDefinition)>| {
+        iter.into_iter()
+            .map(|(k, v)| (k.to_string(), v))
+            .collect()
+    })]
     pub properties: Option<Record<FieldDefinition>>,
 }
 
@@ -37,6 +46,24 @@ pub enum FieldRequired {
     VecString(Vec<String>),
 }
 
+/// Marker type to indicate that a field is required.
+///
+/// Since implementing `From<bool>` conflics with `From<Iterator>`, this type can be used
+/// to indicate that a field is required.
+pub struct Required;
+
+impl From<Required> for FieldRequired {
+    fn from(_: Required) -> Self {
+        FieldRequired::Boolean(true)
+    }
+}
+
+impl<'a, I: IntoIterator<Item = &'static str>> From<I> for FieldRequired {
+    fn from(value: I) -> Self {
+        FieldRequired::VecString(value.into_iter().map(|s| s.to_string()).collect())
+    }
+}
+
 #[derive(Builder, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Input {
@@ -51,12 +78,27 @@ pub struct Input {
     pub body_type: Option<InputBodyType>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(with = |iter: impl IntoIterator<Item = (&'static str, FieldDefinition)>| {
+        iter.into_iter()
+            .map(|(k, v)| (k.to_string(), v))
+            .collect()
+    })]
     pub query_params: Option<Record<FieldDefinition>>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(with = |iter: impl IntoIterator<Item = (&'static str, FieldDefinition)>| {
+        iter.into_iter()
+            .map(|(k, v)| (k.to_string(), v))
+            .collect()
+    })]
     pub body_fields: Option<Record<FieldDefinition>>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(with = |iter: impl IntoIterator<Item = (&'static str, FieldDefinition)>| {
+        iter.into_iter()
+            .map(|(k, v)| (k.to_string(), v))
+            .collect()
+    })]
     pub header_fields: Option<Record<FieldDefinition>>,
 }
 
@@ -96,6 +138,9 @@ pub struct OutputSchema {
     pub input: Input,
 
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[builder(with = |iter: impl IntoIterator<Item = (&'static str, FieldDefinition)>| {
+        iter.into_iter().map(|(k, v)| (k.to_string(), v)).collect()
+    })]
     pub output: Option<Record<FieldDefinition>>,
 }
 
@@ -122,5 +167,214 @@ impl OutputSchema {
                     .build(),
             )
             .build()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    fn setup_complex_input() -> Input {
+        Input::builder()
+            .input_type(InputType::Http)
+            .method(Method::Post)
+            .discoverable(true)
+            .body_type(InputBodyType::Json)
+            .header_fields([(
+                "example_header",
+                FieldDefinition::builder()
+                    .description("An example header")
+                    .field_type("string")
+                    .required(Required)
+                    .build(),
+            )])
+            .query_params([(
+                "exmple_query",
+                FieldDefinition::builder()
+                    .description("An example query parameter")
+                    .field_type("string")
+                    .build(),
+            )])
+            .body_fields([(
+                "example",
+                FieldDefinition::builder()
+                    .description("An example field")
+                    .field_type("string")
+                    .required(["nested_field", "nested_field2"])
+                    .properties([
+                        (
+                            "nested_field",
+                            FieldDefinition::builder()
+                                .field_type("number")
+                                .description("A nested field")
+                                .required(Required)
+                                .build(),
+                        ),
+                        (
+                            "nested_field2",
+                            FieldDefinition::builder()
+                                .field_type("string")
+                                .description("Optional nested field")
+                                .field_enum(["a", "b", "c"])
+                                .build(),
+                        ),
+                    ])
+                    .build(),
+            )])
+            .build()
+    }
+
+    #[test]
+    fn build_input() {
+        let input = setup_complex_input();
+
+        let input_json = json!({
+            "discoverable": true,
+            "type": "http",
+            "method": "post",
+            "bodyType": "json",
+            "headerFields": {
+                "example_header": {
+                    "type": "string",
+                    "required": true,
+                    "description": "An example header"
+                }
+            },
+            "queryParams": {
+                "exmple_query": {
+                    "type": "string",
+                    "description": "An example query parameter"
+                }
+            },
+            "bodyFields": {
+                "example": {
+                    "type": "string",
+                    "required": ["nested_field", "nested_field2"],
+                    "description": "An example field",
+                    "properties": {
+                        "nested_field": {
+                            "type": "number",
+                            "required": true,
+                            "description": "A nested field"
+                        },
+                        "nested_field2": {
+                            "type": "string",
+                            "description": "Optional nested field",
+                            "enum": ["a", "b", "c"]
+                        }
+                    }
+                }
+            }
+        });
+
+        assert_eq!(serde_json::to_value(&input).unwrap(), input_json);
+    }
+
+    #[test]
+    fn build_output_schema() {
+        let input = setup_complex_input();
+
+        let output_schema = OutputSchema::builder()
+            .input(input.clone())
+            .output([(
+                "response_field",
+                FieldDefinition::builder()
+                    .field_type("string")
+                    .description("A response field")
+                    .required(Required)
+                    .build(),
+            )])
+            .build();
+
+        let output_schema_json = json!({
+            "input": {
+                "discoverable": true,
+                "type": "http",
+                "method": "post",
+                "bodyType": "json",
+                "headerFields": {
+                    "example_header": {
+                        "type": "string",
+                        "required": true,
+                        "description": "An example header"
+                    }
+                },
+                "queryParams": {
+                    "exmple_query": {
+                        "type": "string",
+                        "description": "An example query parameter"
+                    }
+                },
+                "bodyFields": {
+                    "example": {
+                        "type": "string",
+                        "required": ["nested_field", "nested_field2"],
+                        "description": "An example field",
+                        "properties": {
+                            "nested_field": {
+                                "type": "number",
+                                "required": true,
+                                "description": "A nested field"
+                            },
+                            "nested_field2": {
+                                "type": "string",
+                                "description": "Optional nested field",
+                                "enum": ["a", "b", "c"]
+                            }
+                        }
+                    }
+                }
+            },
+            "output": {
+                "response_field": {
+                    "type": "string",
+                    "required": true,
+                    "description": "A response field"
+                }
+            }
+        });
+
+        assert_eq!(
+            serde_json::to_value(&output_schema).unwrap(),
+            output_schema_json
+        );
+    }
+
+    #[test]
+    fn discoverable_helpers() {
+        let get_schema = OutputSchema::discoverable_http_get();
+        assert!(matches!(get_schema.input.input_type, InputType::Http));
+        assert_eq!(get_schema.input.method, Method::Get);
+        assert!(get_schema.input.discoverable);
+
+        let get_schema_json = json!({
+            "input": {
+                "discoverable": true,
+                "type": "http",
+                "method": "get"
+            }
+        });
+
+        assert_eq!(serde_json::to_value(&get_schema).unwrap(), get_schema_json);
+
+        let post_schema = OutputSchema::discoverable_http_post();
+        assert!(matches!(post_schema.input.input_type, InputType::Http));
+        assert_eq!(post_schema.input.method, Method::Post);
+        assert!(post_schema.input.discoverable);
+
+        let post_schema_json = json!({
+            "input": {
+                "discoverable": true,
+                "type": "http",
+                "method": "post"
+            }
+        });
+
+        assert_eq!(
+            serde_json::to_value(&post_schema).unwrap(),
+            post_schema_json
+        );
     }
 }

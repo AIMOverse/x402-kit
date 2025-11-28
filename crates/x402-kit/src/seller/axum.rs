@@ -7,7 +7,7 @@ use axum::{
 
 use crate::{
     concepts::Facilitator,
-    seller::{
+    seller::toolkit::{
         extract_payment_payload, select_payment_with_payload, settle_payment,
         update_supported_kinds, verify_payment,
     },
@@ -18,10 +18,10 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-pub struct PaymentErrorResponse(pub crate::seller::ErrorResponse);
+pub struct PaymentErrorResponse(pub crate::seller::toolkit::ErrorResponse);
 
-impl From<crate::seller::ErrorResponse> for PaymentErrorResponse {
-    fn from(err: crate::seller::ErrorResponse) -> Self {
+impl From<crate::seller::toolkit::ErrorResponse> for PaymentErrorResponse {
+    fn from(err: crate::seller::toolkit::ErrorResponse) -> Self {
         PaymentErrorResponse(err)
     }
 }

@@ -9,7 +9,7 @@ use url::Url;
 use url_macro::url;
 use x402_kit::{
     config::Resource, facilitator_client::RemoteFacilitatorClient, networks::evm::assets::UsdcBase,
-    schemes::exact_evm::ExactEvm, seller::process_payment, transport::Base64EncodedHeader,
+    schemes::exact_evm::ExactEvm, seller::toolkit::process_payment, transport::Base64EncodedHeader,
     types::OutputSchema,
 };
 
