@@ -1,20 +1,11 @@
-<div align="center">
 
 # X402 Kit
 
+[![Build status](https://github.com/AIMOverse/x402-kit/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/AIMOverse/x402-kit/actions)
+[![Crates.io](https://img.shields.io/crates/v/x402-kit)](https://crates.io/crates/x402-kit)
+[![Documentation](https://docs.rs/x402-kit/badge.svg)](https://docs.rs/x402-kit)
+
 A fully modular, framework-agnostic, easy-to-extend SDK for building complex X402 payment integrations.
-
-  <a href="https://github.com/AIMOverse/x402-kit/actions">
-    <img src="https://github.com/AIMOverse/x402-kit/actions/workflows/ci.yml/badge.svg" alt="CI Status" />
-  </a>
-  <a href="https://crates.io/crates/x402-kit">
-    <img src="https://img.shields.io/crates/v/x402-kit.svg" alt="crates.io version" />
-  </a>
-  <a href="https://docs.rs/x402-kit">
-    <img src="https://docs.rs/x402-kit/badge.svg" alt="docs.rs" />
-  </a>
-
-</div>
 
 ## 📚 Developer Docs
 
