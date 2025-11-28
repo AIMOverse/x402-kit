@@ -1,8 +1,26 @@
+<div align="center">
+
 # X402 Kit
 
 A fully modular, framework-agnostic, easy-to-extend SDK for building complex X402 payment integrations.
 
-## Core Pain Points Solved
+  <a href="https://github.com/AIMOverse/x402-kit/actions">
+    <img src="https://github.com/AIMOverse/x402-kit/actions/workflows/ci.yml/badge.svg" alt="CI Status" />
+  </a>
+  <a href="https://crates.io/crates/x402-kit">
+    <img src="https://img.shields.io/crates/v/x402-kit.svg" alt="crates.io version" />
+  </a>
+  <a href="https://docs.rs/x402-kit">
+    <img src="https://docs.rs/x402-kit/badge.svg" alt="docs.rs" />
+  </a>
+
+</div>
+
+## 📚 Developer Docs
+
+Docs are available at [docs.rs](https://docs.rs/x402-kit/latest/x402_kit/)
+
+## 💡 Core Pain Points Solved
 
 X402-kit is **not a facilitator** — it's a composable SDK for buyers (signers) and sellers (servers) to build custom business logic. Future support for modular facilitator components is planned.
 
@@ -29,7 +47,7 @@ However, we still recommend contributing back any useful implementations to the 
 
 Minimize runtime errors through compile-time guarantees while maintaining the flexibility needed for real-world business logic.
 
-## Axum Usage Examples
+## 🧪 Axum Usage Examples
 
 Two runnable demos live under `crates/x402-kit/examples`. Export `FACILITATOR_URL` so the SDK can reach your facilitator before starting either server.
 
