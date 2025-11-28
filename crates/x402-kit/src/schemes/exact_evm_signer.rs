@@ -127,7 +127,7 @@ where
             verifying_contract: A::ASSET.address.0,
         );
         let signature = signer
-            .sign_authorization(&auth_clone.into(), &domain.into())
+            .sign_authorization(&auth_clone.into(), &domain)
             .await
             .map_err(Self::Error::SignerError)?;
         Ok(ExactEvmPayload {

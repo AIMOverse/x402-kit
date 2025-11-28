@@ -151,7 +151,7 @@ impl<F: Facilitator> PaymentHandler<F> {
         } else {
             // Proceed first, then settle
             let extension = verify
-                .map(|valid| PaymentProcessingState::Verified(valid))
+                .map(PaymentProcessingState::Verified)
                 .unwrap_or(PaymentProcessingState::NotVerified);
 
             req.extensions_mut().insert(extension.clone());
