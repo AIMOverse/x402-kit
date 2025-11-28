@@ -58,7 +58,7 @@ impl From<Required> for FieldRequired {
     }
 }
 
-impl<'a, I: IntoIterator<Item = &'static str>> From<I> for FieldRequired {
+impl<I: IntoIterator<Item = &'static str>> From<I> for FieldRequired {
     fn from(value: I) -> Self {
         FieldRequired::VecString(value.into_iter().map(|s| s.to_string()).collect())
     }
