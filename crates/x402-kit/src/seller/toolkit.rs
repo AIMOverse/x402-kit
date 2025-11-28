@@ -1,3 +1,63 @@
+//! Toolkit for processing payments on the seller side.
+//!
+//! This module provides functions and types to handle payment processing. Use this module if you are
+//! implementing more customized payment handling logic beyond the provided middleware and handlers, or
+//! if you want to integrate payment processing into a web framework (currently only `axum` is supported).
+//!
+//! ## Error Handling
+//!
+//! [`ErrorResponse`] Represents structured error responses during payment processing, accoring to the
+//! [X402 specification](https://github.com/coinbase/x402/blob/main/specs/transports/http.md#error-handling).
+//! Call [`ErrorResponse::into_payment_requirements_response`] to convert into [`crate::transport::PaymentRequirementsResponse`],
+//! which is the expected response format for payment errors.
+//!
+//! Use this type for framework specific error responses. For example, in `axum`, we can implement [`axum::response::IntoResponse`] trait:
+//!
+//! ```rust
+//! use x402-kit::seller::toolkit::ErrorResponse;
+//! use axum::{Json, response::{IntoResponse, Response}};
+//!
+//! #[derive(Debug, Clone)]
+//! pub struct PaymentErrorResponse(pub ErrorResponse);
+//!
+//! impl From<ErrorResponse> for PaymentErrorResponse {
+//!     fn from(err: ErrorResponse) -> Self {
+//!         PaymentErrorResponse(err)
+//!     }
+//! }
+//!
+//! impl IntoResponse for PaymentErrorResponse {
+//!     fn into_response(self) -> Response {
+//!         (
+//!             self.0.status,
+//!             Json(self.0.into_payment_requirements_response()),
+//!         )
+//!             .into_response()
+//!     }
+//! }
+//! ```
+//!
+//! ## X402 Workflow
+//!
+//! 1. Extract the `X-Payment` header from the incoming request using [`extract_payment_payload`]. If the header is missing or invalid, return an appropriate error response.
+//! 2. Update the payment requirements with supported kinds from the facilitator using [`update_supported_kinds`]. This function uses [`filter_supported_kinds`] internally, and if you want more control, you can call it directly.
+//!     However, this step is optional if you are certain that the provided payment requirements are already compatible with the facilitator. You usually need to do this for Solana payments, because you need the `feePayer` field from the facilitator's supported kinds.
+//! 3. Select the appropriate payment requirements based on the extracted payment payload using [`select_payment_with_payload`].
+//!
+//! Now we have two options: verify, handle the request **before** settlement, then settle the payment; or handle the request **after** settlement.
+//! If you choose to settle first, verifying is optional, depending on your use case.
+//!
+//! We expose [`verify_payment`] and [`settle_payment`] functions separately for more granular control.
+//!
+//! Three entrypoint functions are provided for these options:
+//! - [`process_payment`]: Full workflow with verification and settlement. Process the request after settlement.
+//! - [`process_payment_no_verify`]: Skip verification, only settle the payment. Process the request after settlement.
+//! - [`process_payment_no_settle`]: Only verify the payment, skip settlement. Call [`settle_payment`] separately after processing the request.
+//!
+//! After successful payment processing, you can construct a [`crate::transport::PaymentResponse`], convert it into base64-encoded header using [`Base64EncodedHeader::try_from`],
+//! and include it in the response headers as `X-Payment-Response`.
+//!
+
 use std::fmt::Display;
 
 use http::{HeaderMap, StatusCode};

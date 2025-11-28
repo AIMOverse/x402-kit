@@ -106,6 +106,9 @@
 //! };
 //!
 //! async fn payment_middleware(req: Request, next: Next) -> Response {
+//!     // You can dynamically calculate required assets, amounts, etc. per request here
+//!     // with axum's State, Extension, or other extractors.
+//!     
 //!     PaymentHandler::builder(RemoteFacilitatorClient::from_url(
 //!         url!("https://facilitator.example.com"),
 //!     ))
@@ -125,6 +128,21 @@
 //!     )
 //!     .build()
 //!     .handle_payment()
+//!     // Optional - Don't request for facilitator's supported kinds
+//!     // Don't call this if you need `extra` field updated with facilitator's information
+//!     // For example, on Solana, you need this to get the latest fee payer info
+//!     .no_update_supported_kinds()
+//!     //
+//!     // Optional - Don't verify payment status before settling
+//!     // Use this if you want to settle immediately after payment submission
+//!     // Use this with caution with `settle_after_next` to avoid
+//!     // failed settlements after expensive operations like LLM inference.
+//!     .no_verify()
+//!     //
+//!     // Optional - Settle after next handler
+//!     // Without this, payment is settled before request handling
+//!     .settle_after_next()
+//!     // Pass in the request and next handler from Axum middleware context
 //!     .req(req)
 //!     .next(next)
 //!     .call()

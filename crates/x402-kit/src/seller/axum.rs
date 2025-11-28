@@ -85,13 +85,25 @@ impl<F: Facilitator> PaymentHandler<F> {
     #[builder]
     pub async fn handle_payment(
         self,
-        #[builder(with = || ())] no_update_supported: Option<()>,
-        #[builder(with = || ())] no_verify: Option<()>,
-        #[builder(with = || ())] settle_after_next: Option<()>,
+        /// Optional - Don't request for facilitator's supported kinds update.
+        ///
+        /// Use this with caution on Solana or non-USDC tokens on EVM networks, because
+        /// you may miss important extra field updates from the facilitator.
+        #[builder(with = || ())]
+        no_update_supported_kinds: Option<()>,
+        /// Optional - Don't verify payment before proceeding to next handler.
+        ///
+        /// Use this with caution with `settle_after_next`, because the payment may fail to settle
+        /// after expensive operations have been performed in the next handler like LLM inference.
+        #[builder(with = || ())]
+        no_verify: Option<()>,
+        /// Optional - Settle payment after proceeding to next handler.
+        #[builder(with = || ())]
+        settle_after_next: Option<()>,
         mut req: Request,
         next: Next,
     ) -> Result<PaymentSuccessResponse, PaymentErrorResponse> {
-        let payment_requirements = if no_update_supported.is_none() {
+        let payment_requirements = if no_update_supported_kinds.is_none() {
             // Should update supported kinds
             update_supported_kinds(&self.facilitator, self.payment_requirements).await?
         } else {
@@ -241,7 +253,7 @@ mod tests {
         .build()
         .handle_payment()
         .no_verify()
-        .no_update_supported()
+        .no_update_supported_kinds()
         .settle_after_next()
         .req(req)
         .next(next)
