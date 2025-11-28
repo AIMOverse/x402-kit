@@ -90,12 +90,12 @@ impl FacilitatorVerifyResponse {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FacilitatorVerifyValid {
     pub payer: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FacilitatorVerifyInvalid {
     pub invalid_reason: String,
     pub payer: Option<String>,
@@ -121,14 +121,14 @@ impl FacilitatorSettleResponse {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FacilitatorSettleSuccess {
     pub payer: String,
     pub transaction: String,
     pub network: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FacilitatorSettleFailed {
     pub error_reason: String,
     pub payer: Option<String>,

@@ -1,17 +1,20 @@
 use alloy_primitives::address;
 use axum::{
-    Json, Router,
+    Extension, Json, Router,
     extract::Request,
     middleware::{Next, from_fn},
     routing::post,
 };
+use http::StatusCode;
 use url_macro::url;
 use x402_kit::{
     config::Resource,
     facilitator_client::RemoteFacilitatorClient,
     networks::evm::assets::UsdcBase,
     schemes::exact_evm::ExactEvm,
-    seller::axum::{PaymentErrorResponse, PaymentHandler, PaymentSuccessResponse},
+    seller::axum::{
+        PaymentErrorResponse, PaymentHandler, PaymentProcessingState, PaymentSuccessResponse,
+    },
 };
 
 #[tokio::main]
@@ -27,8 +30,8 @@ async fn main() {
         );
 
     // run our app with hyper, listening globally on port 3000
-    tracing::info!("Listening on http://0.0.0.0:3010");
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3010").await.unwrap();
+    tracing::info!("Listening on http://0.0.0.0:3000");
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
 
@@ -49,7 +52,7 @@ async fn payment_middleware(
             .pay_to(address!("0x17d2e11d0405fa8d0ad2dca6409c499c0132c017"))
             .resource(
                 Resource::builder()
-                    .url(url!("http://localhost:3010/premium"))
+                    .url(url!("http://localhost:3000/premium"))
                     .description("")
                     .mime_type("")
                     .build(),
@@ -64,15 +67,29 @@ async fn payment_middleware(
     .await
 }
 
-async fn premium_content(Json(body): Json<serde_json::Value>) -> Json<serde_json::Value> {
+async fn premium_content(
+    Extension(payment): Extension<PaymentProcessingState>,
+    Json(body): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    match payment {
+        PaymentProcessingState::Settled(settled) => tracing::info!(
+            "Payment settled: {}",
+            serde_json::to_string_pretty(&settled).unwrap()
+        ),
+        _ => {
+            tracing::error!("Payment should be settled here");
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    }
+
     tracing::info!(
         "Received body: {}",
         serde_json::to_string_pretty(&body).unwrap()
     );
 
-    // In a real application, you would verify payment here before serving content
+    // Do work to deliver premium content here...
 
-    Json(serde_json::json!({
+    Ok(Json(serde_json::json!({
         "message": "This is premium content accessible after payment!"
-    }))
+    })))
 }
