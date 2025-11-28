@@ -1,3 +1,4 @@
+use http::{HeaderMap, HeaderName, HeaderValue};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -8,7 +9,6 @@ use crate::{
         FacilitatorSettleSuccess, FacilitatorSupportedResponse, FacilitatorVerifyInvalid,
         FacilitatorVerifyResponse, FacilitatorVerifyValid, PaymentPayload, PaymentRequirements,
     },
-    types::Record,
 };
 
 /// A remote facilitator client that communicates over HTTP.
@@ -31,8 +31,9 @@ where
 {
     pub base_url: Url,
     pub client: reqwest::Client,
-    pub verify_headers: Record<String>,
-    pub settle_headers: Record<String>,
+    pub supported_headers: HeaderMap,
+    pub verify_headers: HeaderMap,
+    pub settle_headers: HeaderMap,
     pub _phantom: std::marker::PhantomData<(VReq, VRes, SReq, SRes)>,
 }
 
@@ -127,12 +128,13 @@ where
     SReq: From<FacilitatorPaymentRequest> + Serialize,
     SRes: IntoSettleResponse + for<'de> Deserialize<'de>,
 {
-    pub fn new(base_url: Url) -> Self {
+    pub fn new_from_url(base_url: Url) -> Self {
         RemoteFacilitatorClient {
             base_url,
             client: reqwest::Client::new(),
-            verify_headers: Record::new(),
-            settle_headers: Record::new(),
+            supported_headers: HeaderMap::new(),
+            verify_headers: HeaderMap::new(),
+            settle_headers: HeaderMap::new(),
             _phantom: std::marker::PhantomData,
         }
     }
@@ -146,6 +148,7 @@ where
         RemoteFacilitatorClient {
             base_url: self.base_url,
             client: self.client,
+            supported_headers: self.supported_headers,
             verify_headers: self.verify_headers,
             settle_headers: self.settle_headers,
             _phantom: std::marker::PhantomData,
@@ -159,6 +162,7 @@ where
         NewVRes: IntoVerifyResponse + for<'de> Deserialize<'de>,
     {
         RemoteFacilitatorClient {
+            supported_headers: self.supported_headers,
             base_url: self.base_url,
             verify_headers: self.verify_headers,
             settle_headers: self.settle_headers,
@@ -174,6 +178,7 @@ where
         NewSReq: From<FacilitatorPaymentRequest> + Serialize,
     {
         RemoteFacilitatorClient {
+            supported_headers: self.supported_headers,
             base_url: self.base_url,
             verify_headers: self.verify_headers,
             settle_headers: self.settle_headers,
@@ -189,12 +194,35 @@ where
         NewSRes: IntoSettleResponse + for<'de> Deserialize<'de>,
     {
         RemoteFacilitatorClient {
+            supported_headers: self.supported_headers,
             base_url: self.base_url,
             verify_headers: self.verify_headers,
             settle_headers: self.settle_headers,
             client: self.client,
             _phantom: std::marker::PhantomData,
         }
+    }
+
+    pub fn header(mut self, key: &HeaderName, value: &HeaderValue) -> Self {
+        self.supported_headers.insert(key, value.to_owned());
+        self.verify_headers.insert(key, value.to_owned());
+        self.settle_headers.insert(key, value.to_owned());
+        self
+    }
+
+    pub fn supported_header(mut self, key: &HeaderName, value: &HeaderValue) -> Self {
+        self.supported_headers.insert(key, value.to_owned());
+        self
+    }
+
+    pub fn verify_header(mut self, key: &HeaderName, value: &HeaderValue) -> Self {
+        self.verify_headers.insert(key, value.to_owned());
+        self
+    }
+
+    pub fn settle_header(mut self, key: &HeaderName, value: &HeaderValue) -> Self {
+        self.settle_headers.insert(key, value.to_owned());
+        self
     }
 }
 
@@ -206,8 +234,8 @@ impl
         DefaultSettleResponse,
     >
 {
-    pub fn new_default(base_url: Url) -> Self {
-        RemoteFacilitatorClient::new(base_url)
+    pub fn from_url(base_url: Url) -> Self {
+        RemoteFacilitatorClient::new_from_url(base_url)
     }
 }
 
@@ -234,6 +262,7 @@ where
         let supported = self
             .client
             .get(self.base_url.join("supported")?)
+            .headers(self.supported_headers.clone())
             .send()
             .await?
             .json()
@@ -249,6 +278,7 @@ where
         let result = self
             .client
             .post(self.base_url.join("verify")?)
+            .headers(self.verify_headers.clone())
             .json(&VReq::from(request))
             .send()
             .await?
@@ -265,6 +295,7 @@ where
         let result = self
             .client
             .post(self.base_url.join("settle")?)
+            .headers(self.settle_headers.clone())
             .json(&SReq::from(request))
             .send()
             .await?

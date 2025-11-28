@@ -5,11 +5,11 @@ use http::{HeaderMap, StatusCode};
 use crate::{
     concepts::Facilitator,
     transport::{
-        Base64EncodedHeader, FacilitatorPaymentRequest, FacilitatorPaymentRequestHeaders,
-        FacilitatorPaymentRequestPayload, FacilitatorSettleFailed, FacilitatorSettleResponse,
-        FacilitatorSettleSuccess, FacilitatorSupportedResponse, FacilitatorVerifyInvalid,
-        FacilitatorVerifyResponse, FacilitatorVerifyValid, PaymentPayload, PaymentRequirements,
-        PaymentRequirementsResponse, PaymentResponse,
+        Base64EncodedHeader, FacilitatorPaymentRequest, FacilitatorPaymentRequestPayload,
+        FacilitatorSettleFailed, FacilitatorSettleResponse, FacilitatorSettleSuccess,
+        FacilitatorSupportedResponse, FacilitatorVerifyInvalid, FacilitatorVerifyResponse,
+        FacilitatorVerifyValid, PaymentPayload, PaymentRequirements, PaymentRequirementsResponse,
+        PaymentResponse,
     },
     types::X402Version,
 };
@@ -163,10 +163,7 @@ pub async fn verify_payment<F: Facilitator>(
             payment_payload,
             payment_requirements: selected.clone(),
         },
-        headers: FacilitatorPaymentRequestHeaders {
-            payment_header: x_payment_header.clone(),
-            extra_headers: Default::default(),
-        },
+        x_payment_header: x_payment_header.clone(),
     };
 
     let verify_response = facilitator
@@ -207,10 +204,7 @@ pub async fn settle_payment<F: Facilitator>(
                 payment_payload,
                 payment_requirements: selected.clone(),
             },
-            headers: FacilitatorPaymentRequestHeaders {
-                payment_header: x_payment_header.clone(),
-                extra_headers: Default::default(),
-            },
+            x_payment_header: x_payment_header.clone(),
         })
         .await
         .map_err(|err| ErrorResponse::server_error(err, payment_requirements))?;

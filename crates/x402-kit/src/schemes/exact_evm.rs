@@ -6,7 +6,7 @@ use crate::{
     config::{PaymentRequirementsConfig, Resource, TransportConfig},
     networks::evm::{EvmAddress, EvmNetwork, EvmSignature, ExplicitEvmAsset, ExplicitEvmNetwork},
     transport::PaymentRequirements,
-    types::{AmountValue, Any},
+    types::{AmountValue, AnyJson},
 };
 
 use std::{
@@ -141,7 +141,7 @@ pub struct ExactEvm<A: ExplicitEvmAsset> {
     pub amount: u64,
     pub max_timeout_seconds_override: Option<u64>,
     pub resource: Resource,
-    pub extra_override: Option<Any>,
+    pub extra_override: Option<AnyJson>,
 }
 
 impl<A: ExplicitEvmAsset> ExactEvm<A> {

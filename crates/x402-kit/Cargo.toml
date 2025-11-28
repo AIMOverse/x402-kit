@@ -16,7 +16,7 @@ default = [
     "seller",
     "axum",
 ]
-facilitator-client = ["dep:reqwest"]
+facilitator-client = ["dep:reqwest", "dep:http"]
 tracing = ["dep:tracing"]
 evm-signer = ["dep:alloy-core", "dep:alloy-signer", "dep:rand"]
 svm-signer = ["dep:bincode"]
@@ -54,7 +54,7 @@ bincode = { version = "2.0", features = ["serde"], optional = true }
 axum = { version = "0.8", optional = true }
 tower = { version = "0.5", optional = true }
 
-# === Feature "seller" ===
+# === Feature "seller" | "facilitator-client" ===
 http = { version = "1.4", optional = true }
 
 [dev-dependencies]

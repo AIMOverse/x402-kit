@@ -221,7 +221,7 @@ mod tests {
         req: Request,
         next: Next,
     ) -> Result<PaymentSuccessResponse, PaymentErrorResponse> {
-        PaymentHandler::builder(RemoteFacilitatorClient::new_default(url!(
+        PaymentHandler::builder(RemoteFacilitatorClient::from_url(url!(
             "https://facilitator.example.com"
         )))
         .add_payment(

@@ -4,7 +4,7 @@ use base64::{Engine, prelude::BASE64_STANDARD};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::types::{AmountValue, Any, OutputSchema, Record, X402Version};
+use crate::types::{AmountValue, AnyJson, OutputSchema, X402Version};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -32,7 +32,7 @@ pub struct PaymentRequirements {
     pub output_schema: Option<OutputSchema>,
     /// Extra fields for extensibility
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub extra: Option<Any>,
+    pub extra: Option<AnyJson>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,7 +41,7 @@ pub struct PaymentPayload {
     pub x402_version: X402Version,
     pub scheme: String,
     pub network: String,
-    pub payload: Any,
+    pub payload: AnyJson,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,19 +55,13 @@ pub struct PaymentRequirementsResponse {
 #[derive(Debug, Clone)]
 pub struct FacilitatorPaymentRequest {
     pub payload: FacilitatorPaymentRequestPayload,
-    pub headers: FacilitatorPaymentRequestHeaders,
+    pub x_payment_header: Base64EncodedHeader,
 }
 
 #[derive(Debug, Clone)]
 pub struct FacilitatorPaymentRequestPayload {
     pub payment_payload: PaymentPayload,
     pub payment_requirements: PaymentRequirements,
-}
-
-#[derive(Debug, Clone)]
-pub struct FacilitatorPaymentRequestHeaders {
-    pub payment_header: Base64EncodedHeader,
-    pub extra_headers: Record<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -140,7 +134,7 @@ pub struct FacilitatorSupportedKinds {
     pub x402_version: X402Version,
     pub scheme: String,
     pub network: String,
-    pub extra: Option<Any>,
+    pub extra: Option<AnyJson>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

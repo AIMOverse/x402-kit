@@ -4,7 +4,7 @@ use url::Url;
 use crate::{
     concepts::{Address, Asset, NetworkFamily, Scheme},
     transport::PaymentRequirements,
-    types::{AmountValue, Any, OutputSchema},
+    types::{AmountValue, AnyJson, OutputSchema},
 };
 
 /// Resource configuration.
@@ -49,7 +49,7 @@ where
 {
     pub scheme: S,
     pub transport: TransportConfig<A>,
-    pub extra: Option<Any>,
+    pub extra: Option<AnyJson>,
 }
 
 impl<S, A> From<PaymentRequirementsConfig<S, A>> for PaymentRequirements

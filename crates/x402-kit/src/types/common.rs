@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 pub type Record<V> = std::collections::HashMap<String, V>;
 
-pub type Any = serde_json::Value;
+pub type AnyJson = serde_json::Value;
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub enum X402Version {

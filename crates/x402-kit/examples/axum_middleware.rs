@@ -33,7 +33,7 @@ async fn main() {
 }
 
 async fn payment_middleware(req: Request, next: Next) -> Response {
-    PaymentHandler::builder(RemoteFacilitatorClient::new_default(
+    PaymentHandler::builder(RemoteFacilitatorClient::from_url(
         std::env::var("FACILITATOR_URL")
             .expect("FACILITATOR_URL not set")
             .parse()

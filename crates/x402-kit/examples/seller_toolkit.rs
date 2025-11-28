@@ -63,7 +63,7 @@ async fn premium_content(
         .into();
 
     // Create facilitator client
-    let facilitator = RemoteFacilitatorClient::new_default(facilitator_url);
+    let facilitator = RemoteFacilitatorClient::from_url(facilitator_url);
 
     // We won't generate ANY errors until here - Everything checked at compile time
 

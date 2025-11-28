@@ -9,7 +9,7 @@ use crate::{
         FacilitatorPaymentRequest, FacilitatorSettleResponse, FacilitatorSupportedResponse,
         FacilitatorVerifyResponse, PaymentRequirements,
     },
-    types::{AmountValue, Any, OutputSchema},
+    types::{AmountValue, AnyJson, OutputSchema},
 };
 
 /// A series of network families, e.g. EVM, SVM, etc.
@@ -89,7 +89,7 @@ pub struct PaymentSelection<A: Address> {
     /// Schema of the input / output payload
     pub output_schema: Option<OutputSchema>,
     /// Extra fields for extensibility
-    pub extra: Option<Any>,
+    pub extra: Option<AnyJson>,
 }
 
 /// Signer for a given payment scheme.
