@@ -210,13 +210,6 @@ pub mod assets {
 
     use super::*;
 
-    pub const ETH: EvmAsset = EvmAsset {
-        address: EvmAddress(alloy_primitives::Address::ZERO),
-        decimals: 18,
-        name: "Ether",
-        symbol: "ETH",
-    };
-
     macro_rules! define_explicit_evm_asset {
         (
             $struct_name:ident,
