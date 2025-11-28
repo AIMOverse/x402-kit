@@ -1,4 +1,3 @@
-
 # X402 Kit
 
 [![Build status](https://github.com/AIMOverse/x402-kit/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/AIMOverse/x402-kit/actions)
@@ -6,9 +5,6 @@
 [![Documentation](https://docs.rs/x402-kit/badge.svg)](https://docs.rs/x402-kit)
 [![Twitter Follow](https://img.shields.io/twitter/follow/AiMoNetwork?style=social)](https://x.com/AiMoNetwork)
 [![Discord](https://img.shields.io/badge/Discord-Join%20AiMoNetwork-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.gg/G3zVrZDa5C)
-
-
-
 
 A fully modular, framework-agnostic, easy-to-extend SDK for building complex X402 payment integrations.
 

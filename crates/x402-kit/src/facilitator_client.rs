@@ -21,6 +21,58 @@ use crate::{
 /// - `VRes`: The response type for verification, must be convertible into `FacilitatorVerifyResponse` and deserializable.
 /// - `SReq`: The request type for settlement, must be convertible from `FacilitatorPaymentRequest` and serializable.
 /// - `SRes`: The response type for settlement, must be convertible into `FacilitatorSettleResponse` and deserializable.
+///
+/// # Examples
+///
+/// Create a client with the default payloads and a shared API key header:
+///
+/// ```rust
+/// # use http::{HeaderName, HeaderValue};
+/// # use url::Url;
+/// # use x402_kit::facilitator_client::DefaultRemoteFacilitatorClient;
+/// let client = DefaultRemoteFacilitatorClient::from_url(
+///     Url::parse("https://facilitator.example.com").unwrap(),
+/// )
+/// .header(
+///     &HeaderName::from_static("x-api-key"),
+///     &HeaderValue::from_static("super-secret"),
+/// );
+/// ```
+///
+/// Swap only the verify response type while keeping every other parameter:
+///
+/// ```rust
+/// # use serde::Deserialize;
+/// # use x402_kit::facilitator_client::{DefaultRemoteFacilitatorClient, IntoVerifyResponse};
+/// # use x402_kit::transport::{
+/// #     FacilitatorVerifyInvalid,
+/// #     FacilitatorVerifyResponse,
+/// #     FacilitatorVerifyValid,
+/// # };
+/// #[derive(Deserialize)]
+/// struct CustomVerifyResponse {
+///     ok: bool,
+/// }
+///
+/// impl IntoVerifyResponse for CustomVerifyResponse {
+///     fn into_verify_response(self) -> FacilitatorVerifyResponse {
+///         if self.ok {
+///             FacilitatorVerifyResponse::valid(FacilitatorVerifyValid {
+///                 payer: String::new(),
+///             })
+///         } else {
+///             FacilitatorVerifyResponse::invalid(FacilitatorVerifyInvalid {
+///                 invalid_reason: "not ok".into(),
+///                 payer: None,
+///             })
+///         }
+///     }
+/// }
+///
+/// # use url::Url;
+/// let client = DefaultRemoteFacilitatorClient::from_url(Url::parse("https://facilitator.example.com").unwrap())
+///     .with_verify_response_type::<CustomVerifyResponse>();
+/// ```
 #[derive(Debug, Clone)]
 pub struct RemoteFacilitatorClient<VReq, VRes, SReq, SRes>
 where
@@ -128,6 +180,12 @@ where
     SReq: From<FacilitatorPaymentRequest> + Serialize,
     SRes: IntoSettleResponse + for<'de> Deserialize<'de>,
 {
+    /// Creates a new client rooted at the provided `base_url` with a default `reqwest::Client` and
+    /// no headers configured.
+    ///
+    /// Use the builder-style helpers such as [`RemoteFacilitatorClient::header`] and
+    /// [`RemoteFacilitatorClient::with_verify_request_type`] to refine the client before issuing
+    /// any HTTP calls.
     pub fn new_from_url(base_url: Url) -> Self {
         RemoteFacilitatorClient {
             base_url,
@@ -139,6 +197,9 @@ where
         }
     }
 
+    /// Overrides the request payload type used when calling `/verify` while keeping every other
+    /// type parameter intact. This is useful when the remote facilitator expects a different JSON
+    /// layout than the default [`DefaultPaymentRequest`].
     pub fn with_verify_request_type<NewVReq>(
         self,
     ) -> RemoteFacilitatorClient<NewVReq, VRes, SReq, SRes>
@@ -155,6 +216,9 @@ where
         }
     }
 
+    /// Overrides the response payload type returned by `/verify`. The provided `NewVRes` just needs
+    /// to deserialize and implement [`IntoVerifyResponse`] so the library can convert it back into a
+    /// [`FacilitatorVerifyResponse`].
     pub fn with_verify_response_type<NewVRes>(
         self,
     ) -> RemoteFacilitatorClient<VReq, NewVRes, SReq, SRes>
@@ -171,6 +235,8 @@ where
         }
     }
 
+    /// Overrides the request payload type sent to `/settle` while keeping every other type
+    /// parameter unchanged.
     pub fn with_settle_request_type<NewSReq>(
         self,
     ) -> RemoteFacilitatorClient<VReq, VRes, NewSReq, SRes>
@@ -187,6 +253,8 @@ where
         }
     }
 
+    /// Overrides the response payload type returned by `/settle`. The type must deserialize and
+    /// implement [`IntoSettleResponse`].
     pub fn with_settle_response_type<NewSRes>(
         self,
     ) -> RemoteFacilitatorClient<VReq, VRes, SReq, NewSRes>
@@ -203,6 +271,17 @@ where
         }
     }
 
+    /// Adds a header that will be sent to all three endpoints (`/supported`, `/verify`, `/settle`).
+    ///
+    /// ```rust
+    /// # use url::Url;
+    /// # use http::{HeaderName, HeaderValue};
+    /// # use x402_kit::facilitator_client::DefaultRemoteFacilitatorClient;
+    /// let client = DefaultRemoteFacilitatorClient::from_url(Url::parse("https://example.com").unwrap())
+    ///     .header(&HeaderName::from_static("x-api-key"), &HeaderValue::from_static("secret"));
+    /// ```
+    ///
+    /// Prefer this helper when an auth token or trace header should accompany every request.
     pub fn header(mut self, key: &HeaderName, value: &HeaderValue) -> Self {
         self.supported_headers.insert(key, value.to_owned());
         self.verify_headers.insert(key, value.to_owned());
@@ -210,16 +289,20 @@ where
         self
     }
 
+    /// Adds a header that is only used for the `/supported` endpoint. Useful for flags or tokens
+    /// that differ from the `/verify` or `/settle` requirements.
     pub fn supported_header(mut self, key: &HeaderName, value: &HeaderValue) -> Self {
         self.supported_headers.insert(key, value.to_owned());
         self
     }
 
+    /// Adds a header that is only used for the `/verify` endpoint.
     pub fn verify_header(mut self, key: &HeaderName, value: &HeaderValue) -> Self {
         self.verify_headers.insert(key, value.to_owned());
         self
     }
 
+    /// Adds a header that is only used for the `/settle` endpoint.
     pub fn settle_header(mut self, key: &HeaderName, value: &HeaderValue) -> Self {
         self.settle_headers.insert(key, value.to_owned());
         self
@@ -234,6 +317,11 @@ impl
         DefaultSettleResponse,
     >
 {
+    /// Convenience constructor for the default request/response configuration.
+    ///
+    /// Use the builder-style helpers such as [`RemoteFacilitatorClient::header`] and
+    /// [`RemoteFacilitatorClient::with_verify_request_type`] to refine the client before issuing
+    /// any HTTP calls.
     pub fn from_url(base_url: Url) -> Self {
         RemoteFacilitatorClient::new_from_url(base_url)
     }
@@ -303,5 +391,72 @@ where
             .await?;
 
         Ok(result.into_settle_response())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use http::{HeaderName, HeaderValue};
+    use url::Url;
+
+    fn test_client() -> DefaultRemoteFacilitatorClient {
+        DefaultRemoteFacilitatorClient::from_url(Url::parse("https://example.com/").unwrap())
+    }
+
+    #[test]
+    fn header_sets_all_maps() {
+        let header_name = HeaderName::from_static("x-shared-header");
+        let header_value = HeaderValue::from_static("shared-value");
+
+        let client = test_client().header(&header_name, &header_value);
+
+        for map in [
+            &client.supported_headers,
+            &client.verify_headers,
+            &client.settle_headers,
+        ] {
+            let stored = map.get(&header_name).expect("header missing");
+            assert_eq!(stored, &header_value);
+        }
+    }
+
+    #[test]
+    fn supported_header_only_affects_supported_map() {
+        let header_name = HeaderName::from_static("x-supported-only");
+        let header_value = HeaderValue::from_static("supported-value");
+
+        let client = test_client().supported_header(&header_name, &header_value);
+
+        assert_eq!(
+            client.supported_headers.get(&header_name),
+            Some(&header_value)
+        );
+        assert!(client.verify_headers.get(&header_name).is_none());
+        assert!(client.settle_headers.get(&header_name).is_none());
+    }
+
+    #[test]
+    fn verify_header_only_affects_verify_map() {
+        let header_name = HeaderName::from_static("x-verify-only");
+        let header_value = HeaderValue::from_static("verify-value");
+
+        let client = test_client().verify_header(&header_name, &header_value);
+
+        assert_eq!(client.verify_headers.get(&header_name), Some(&header_value));
+        assert!(client.supported_headers.get(&header_name).is_none());
+        assert!(client.settle_headers.get(&header_name).is_none());
+    }
+
+    #[test]
+    fn settle_header_only_affects_settle_map() {
+        let header_name = HeaderName::from_static("x-settle-only");
+        let header_value = HeaderValue::from_static("settle-value");
+
+        let client = test_client().settle_header(&header_name, &header_value);
+
+        assert_eq!(client.settle_headers.get(&header_name), Some(&header_value));
+        assert!(client.supported_headers.get(&header_name).is_none());
+        assert!(client.verify_headers.get(&header_name).is_none());
     }
 }

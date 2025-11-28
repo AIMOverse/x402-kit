@@ -5,16 +5,16 @@
 //! X402-kit is **not a facilitator** — it's a composable SDK for buyers (signers) and sellers (servers) to build custom business logic.
 //! Future support for modular facilitator components is planned.
 //!
-//! ## Core Components Overview
+//! ## Core Components
 //!
-//! ### For the X402 Protocol
+//! ### The X402 Protocol
 //!
 //! - **[`concepts`]**: Core traits and types used across the X402 Kit.
 //! - **[`config`]**: Configuration types for defining resources and payment requirements.
 //! - **[`transport`]**: Types and traits for defining X402 transport mechanisms and facilitator interactions.
 //! - **[`types`]**: Common re-usable types for defining the X402 protocol.
 //!
-//! ### For Network-Specific Implementations
+//! ### Network-Specific Implementations
 //!
 //! - **[`networks`]**: Network-specific implementations, e.g., EVM / SVM assets and addresses.
 //! - **[`schemes`]**: Payment scheme implementations, e.g., Exact EVM / Exact SVM, and their signer logic.
@@ -81,6 +81,23 @@
 //! let requirements: PaymentRequirements = payment_requirements.into();
 //! # }
 //! ```
+//!
+//! ### Configuring Facilitator Client
+//!
+//! In most cases, you would use a remote facilitator client to interact with an existing facilitator service.
+//!
+//! ```
+//! use url_macro::url;
+//! use x402_kit::facilitator_client::RemoteFacilitatorClient;
+//!
+//! # fn build_facilitator_client() {
+//!    let facilitator = RemoteFacilitatorClient::from_url(
+//!        url!("https://facilitator.example.com"),
+//!    );
+//! # }
+//! ```
+//!
+//! You can customize headers, request / response types for the [`RemoteFacilitatorClient`]. See its documentation for more details.
 //!
 //! ### Axum Integration
 //!
@@ -158,7 +175,7 @@
 //! # async fn premium_handler() {}
 //! ```
 //!
-//! ### The Seller Toolkit
+//! ### Seller Toolkit
 //!
 //! The seller toolkit provides utilities for building custom payment handling logic outside of specific frameworks.
 //!
@@ -166,9 +183,9 @@
 //!
 //! See [`seller::toolkit`] for more details.
 //!
-//! ## Extend X402 Kit As You Like
+//! ## Extending X402 Kit
 //!
-//! The main idea is you don't need to wait for the upstream library to support the network or asset in your case.
+//! The main idea is that you don't need to wait for the upstream library to support the network or asset in your case.
 //! Adding a new network, asset, or scheme is as simple as implementing a few traits.
 //!
 //! However, we still recommend contributing back any useful implementations to the main repository to help grow the ecosystem!
