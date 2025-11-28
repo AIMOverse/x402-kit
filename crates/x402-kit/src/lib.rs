@@ -46,7 +46,7 @@
 //!     .build();
 //! ```
 //!
-//! See unit tests under [`types::schema`] for complex examples of defining input/output schemas.
+//! See unit tests under [`types::OutputSchema`] in the [GitHub repo](https://github.com/AIMOverse/x402-kit/blob/main/crates/x402-kit/src/types/schema.rs) for complex examples of defining input/output schemas.
 //!
 //! #### Schemes
 //!
