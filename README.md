@@ -163,6 +163,14 @@ let facilitator = RemoteFacilitatorClient::from_url(facilitator_url)
 
 With custom serialization in place you can continue calling `process_payment` (or the middleware builder) unchanged while swapping transport formats.
 
+# Next Steps
+
+- Full buyer-side signer support (very soon)
+- List more networks / assets / schemes into the ecosystem
+- MCP / A2A transport support
+- Make this crate `no-std` and [`embassy-rs`](https://github.com/embassy-rs/embassy) compatible - Bring X402 to the embedded / robotic agent's world!
+- X402 V2 support planned
+
 # Acknowledgements
 
 [x402-rs](https://github.com/x402-rs/x402-rs) for providing the first facilitator and x402 SDK in rust
