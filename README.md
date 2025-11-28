@@ -4,6 +4,11 @@
 [![Build status](https://github.com/AIMOverse/x402-kit/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/AIMOverse/x402-kit/actions)
 [![Crates.io](https://img.shields.io/crates/v/x402-kit)](https://crates.io/crates/x402-kit)
 [![Documentation](https://docs.rs/x402-kit/badge.svg)](https://docs.rs/x402-kit)
+[![Twitter Follow](https://img.shields.io/twitter/follow/AiMoNetwork?style=social)](https://x.com/AiMoNetwork)
+[![Discord](https://img.shields.io/badge/Discord-Join%20AiMoNetwork-5865F2?style=flat&logo=discord&logoColor=white)](https://discord.gg/G3zVrZDa5C)
+
+
+
 
 A fully modular, framework-agnostic, easy-to-extend SDK for building complex X402 payment integrations.
 
@@ -172,15 +177,25 @@ let facilitator = RemoteFacilitatorClient::from_url(facilitator_url)
 
 With custom serialization in place you can continue calling `process_payment` (or the middleware builder) unchanged while swapping transport formats.
 
-# Next Steps
+## Next Steps
 
 - Full buyer-side signer support (very soon)
 - List more networks / assets / schemes into the ecosystem
 - MCP / A2A transport support
-- Make this crate `no-std` and [`embassy-rs`](https://github.com/embassy-rs/embassy) compatible - Bring X402 to the embedded / robotic agent's world!
 - X402 V2 support planned
 
-# Acknowledgements
+## Contributing
+
+We welcome all contributions to x402-kit! Here's how you can get involved:
+
+- ⭐ **Star** this repository
+- 🐛 **Open issues** to report bugs or suggest features
+- 🔧 **Submit PRs** to improve the codebase
+
+Contributors will receive **priority access** and **rewards** at AIMO Network's Beta launch (coming soon)!
+
+
+## Acknowledgements
 
 [x402-rs](https://github.com/x402-rs/x402-rs) for providing the first facilitator and x402 SDK in rust
 [faremeter](https://github.com/faremeter/faremeter) for inpiring some of x402-kit's API design
