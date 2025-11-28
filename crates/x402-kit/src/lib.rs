@@ -395,6 +395,10 @@
 //! Just take how `ExactSvmScheme` is defined for example:
 //!
 //! ```
+//! use serde::{Deserialize, Serialize};
+//! use x402_kit::concepts::Scheme;
+//! use x402_kit::networks::svm::SvmNetwork;
+//!
 //! pub struct ExactSvmScheme(pub SvmNetwork);
 //!
 //! #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -418,6 +422,12 @@
 //! Note that `PaymentRequirementsConfig` is a type-safe builder for constructing `PaymentRequirements` from schemes.
 //!
 //! ```
+//! use bon::Builder;
+//! use x402_kit::config::{PaymentRequirementsConfig, Resource, TransportConfig};
+//! use x402_kit::networks::svm::{ExplicitSvmAsset, ExplicitSvmNetwork, SvmAddress};
+//! use x402_kit::schemes::exact_svm::ExactSvmScheme;
+//! use x402_kit::transport::PaymentRequirements;
+//!
 //! #[derive(Builder, Debug, Clone)]
 //! pub struct ExactSvm<A: ExplicitSvmAsset> {
 //!     pub asset: A,
