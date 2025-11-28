@@ -45,7 +45,7 @@ pub struct Input {
     #[serde(rename = "type")]
     pub input_type: InputType,
 
-    pub method: InputMethod,
+    pub method: Method,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub body_type: Option<InputBodyType>,
@@ -67,7 +67,7 @@ pub enum InputType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum InputMethod {
+pub enum Method {
     #[serde(rename = "get")]
     Get,
     #[serde(rename = "post")]
@@ -97,4 +97,30 @@ pub struct OutputSchema {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub output: Option<Record<FieldDefinition>>,
+}
+
+impl OutputSchema {
+    pub fn discoverable_http_get() -> Self {
+        Self::builder()
+            .input(
+                Input::builder()
+                    .input_type(InputType::Http)
+                    .method(Method::Get)
+                    .discoverable(true)
+                    .build(),
+            )
+            .build()
+    }
+
+    pub fn discoverable_http_post() -> Self {
+        Self::builder()
+            .input(
+                Input::builder()
+                    .input_type(InputType::Http)
+                    .method(Method::Post)
+                    .discoverable(true)
+                    .build(),
+            )
+            .build()
+    }
 }

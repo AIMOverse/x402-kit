@@ -8,7 +8,8 @@ use axum::{
 use crate::{
     concepts::Facilitator,
     seller::{
-        extract_payment_payload, select_payment_with_payload, settle_payment, verify_payment,
+        extract_payment_payload, select_payment_with_payload, settle_payment,
+        update_supported_kinds, verify_payment,
     },
     transport::{
         Base64EncodedHeader, FacilitatorSettleSuccess, FacilitatorVerifyValid, PaymentRequirements,
@@ -35,6 +36,7 @@ impl IntoResponse for PaymentErrorResponse {
     }
 }
 
+#[derive(Debug)]
 pub struct PaymentSuccessResponse {
     pub response: Response,
     pub payment_response: PaymentResponse,
@@ -83,13 +85,21 @@ impl<F: Facilitator> PaymentHandler<F> {
     #[builder]
     pub async fn handle_payment(
         self,
-        no_verify: Option<()>,
-        settle_after_next: Option<()>,
+        #[builder(with = || ())] no_update_supported: Option<()>,
+        #[builder(with = || ())] no_verify: Option<()>,
+        #[builder(with = || ())] settle_after_next: Option<()>,
         mut req: Request,
         next: Next,
     ) -> Result<PaymentSuccessResponse, PaymentErrorResponse> {
-        let x_payment_header = extract_payment_payload(req.headers(), &self.payment_requirements)?;
-        let selected = select_payment_with_payload(&self.payment_requirements, &x_payment_header)?;
+        let payment_requirements = if no_update_supported.is_none() {
+            // Should update supported kinds
+            update_supported_kinds(&self.facilitator, self.payment_requirements).await?
+        } else {
+            self.payment_requirements
+        };
+
+        let x_payment_header = extract_payment_payload(req.headers(), &payment_requirements)?;
+        let selected = select_payment_with_payload(&payment_requirements, &x_payment_header)?;
 
         let verify = if no_verify.is_none() {
             // Should verify payment
@@ -97,7 +107,7 @@ impl<F: Facilitator> PaymentHandler<F> {
                 &self.facilitator,
                 &x_payment_header,
                 &selected,
-                &self.payment_requirements,
+                &payment_requirements,
             )
             .await?;
 
@@ -115,7 +125,7 @@ impl<F: Facilitator> PaymentHandler<F> {
                 &self.facilitator,
                 &x_payment_header,
                 &selected,
-                &self.payment_requirements,
+                &payment_requirements,
             )
             .await?;
 
@@ -154,7 +164,7 @@ impl<F: Facilitator> PaymentHandler<F> {
                 &self.facilitator,
                 &x_payment_header,
                 &selected,
-                &self.payment_requirements,
+                &payment_requirements,
             )
             .await?;
 
@@ -183,15 +193,6 @@ impl<F: Facilitator> PaymentHandlerBuilder<F> {
     pub fn add_payment(mut self, payment_requirements: impl Into<PaymentRequirements>) -> Self {
         self.payment_requirements.push(payment_requirements.into());
         self
-    }
-
-    pub async fn update_facilitator_supported(mut self) -> Result<Self, PaymentErrorResponse> {
-        self.payment_requirements = crate::seller::toolkit::update_supported_kinds(
-            &self.facilitator,
-            self.payment_requirements,
-        )
-        .await?;
-        Ok(self)
     }
 
     pub fn build(self) -> PaymentHandler<F> {
@@ -237,10 +238,11 @@ mod tests {
                 )
                 .build(),
         )
-        .update_facilitator_supported()
-        .await?
         .build()
         .handle_payment()
+        .no_verify()
+        .no_update_supported()
+        .settle_after_next()
         .req(req)
         .next(next)
         .call()
@@ -249,6 +251,6 @@ mod tests {
 
     #[test]
     fn test_build_axum_middleware() {
-        let _ = ServiceBuilder::new().layer(from_fn::<_, Response>(middleware_fn));
+        let _ = ServiceBuilder::new().layer(from_fn::<_, (Request,)>(middleware_fn));
     }
 }
