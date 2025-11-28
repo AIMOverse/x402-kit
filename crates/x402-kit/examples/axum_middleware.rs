@@ -3,6 +3,7 @@ use axum::{
     Extension, Json, Router,
     extract::Request,
     middleware::{Next, from_fn},
+    response::{IntoResponse, Response},
     routing::post,
 };
 use http::StatusCode;
@@ -12,9 +13,7 @@ use x402_kit::{
     facilitator_client::RemoteFacilitatorClient,
     networks::evm::assets::UsdcBase,
     schemes::exact_evm::ExactEvm,
-    seller::axum::{
-        PaymentErrorResponse, PaymentHandler, PaymentProcessingState, PaymentSuccessResponse,
-    },
+    seller::axum::{PaymentHandler, PaymentProcessingState},
 };
 
 #[tokio::main]
@@ -22,12 +21,10 @@ async fn main() {
     tracing_subscriber::fmt::init();
 
     // build our application with a route
-    let app = Router::new()
-        // `POST /premium` goes to `premium_content`
-        .route(
-            "/premium",
-            post(premium_content).layer(from_fn(payment_middleware)),
-        );
+    let app = Router::new().route(
+        "/premium",
+        post(premium_content).layer(from_fn(payment_middleware)),
+    );
 
     // run our app with hyper, listening globally on port 3000
     tracing::info!("Listening on http://0.0.0.0:3000");
@@ -35,10 +32,7 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-async fn payment_middleware(
-    req: Request,
-    next: Next,
-) -> Result<PaymentSuccessResponse, PaymentErrorResponse> {
+async fn payment_middleware(req: Request, next: Next) -> Response {
     PaymentHandler::builder(RemoteFacilitatorClient::new_default(
         std::env::var("FACILITATOR_URL")
             .expect("FACILITATOR_URL not set")
@@ -65,6 +59,8 @@ async fn payment_middleware(
     .next(next)
     .call()
     .await
+    .map(|r| r.into_response())
+    .unwrap_or_else(|err| err.into_response())
 }
 
 async fn premium_content(

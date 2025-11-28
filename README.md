@@ -1,104 +1,140 @@
 # X402 Kit
 
-A fully modular SDK for building complex X402 payment integrations.
+A fully modular, framework-agnostic, easy-to-extend SDK for building complex X402 payment integrations.
 
 ## Core Pain Points Solved
 
 X402-kit is **not a facilitator** — it's a composable SDK for buyers (signers) and sellers (servers) to build custom business logic. Future support for modular facilitator components is planned.
 
-### 1. Beyond Static Pricing
+### Beyond Static Pricing
 
 Existing X402 SDKs only support static prices per API route. X402-kit's fully modular architecture enables complex, dynamic pricing logic while maximizing code reuse.
 
-### 2. Complete Modularity
+### Complete Modularity
 
 All internal fields and methods are public by design. Compose and extend functionality freely without fighting the framework.
 
-### 3. Layered Type Safety
+### Layered Type Safety
 
 - **Transport Layer**: Uses generalized `String` types to prevent serialization failures and ensure service availability
 - **Network + Scheme Layer**: Leverages traits and generics for compile-time type checking without runtime overhead
 
-### 4. Production-Ready Design
+### Ship New Networks Without PRs
+
+Implement a new asset, network, or scheme entirely in your codebase and plug it into the SDK immediately—no upstream pull request or waiting period required thanks to trait-driven extension points.
+
+### Production-Ready Design
 
 Minimize runtime errors through compile-time guarantees while maintaining the flexibility needed for real-world business logic.
 
-## Quick Example: Exact EVM Scheme
-
-```rust
-use x402_kit::{
-    config::Resource,
-    networks::evm::assets::UsdcBaseSepolia,
-    schemes::exact_evm::ExactEvmConfig,
-};
-use alloy_primitives::address;
-use url::Url;
-
-// Define your payment resource
-let resource = Resource::builder()
-    .url(Url::parse("https://example.com/payment").unwrap())
-    .description("Payment for services".to_string())
-    .mime_type("application/json".to_string())
-    .build();
-
-// Build payment requirements with type-safe configuration
-let config = ExactEvmConfig::builder()
-    .asset(UsdcBaseSepolia)
-    .amount(1000)
-    .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
-    .resource(resource)
-    .build();
-
-let payment_requirements = config.into_payment_requirements();
-```
-
 ## Axum Usage Examples
 
-The `crates/x402-kit/examples/axum_usage.rs` example spins up an Axum server that showcases two different ways to accept X402 payments. Run it with your facilitator endpoint configured:
+Two runnable demos live under `crates/x402-kit/examples`. Export `FACILITATOR_URL` so the SDK can reach your facilitator before starting either server.
+
+### 1. Premium content flow (`examples/axum_middleware.rs`, `POST /premium`)
 
 ```bash
 FACILITATOR_URL=https://your-facilitator.example \
-  cargo run -p x402-kit --example axum_usage
+  cargo run -p x402-kit --example axum_middleware
 ```
 
-### 1. Premium content flow (`POST /premium`)
-
-This route uses the default facilitator client and the `process_payment` helper to guard access to premium content. It defines a discoverable HTTP resource and enforces an Exact EVM payment requirement before returning data.
+`axum_middleware.rs` layers `seller::axum::PaymentHandler` in front of your handler, ensuring requests only reach your business logic once the facilitator settles payment. The middleware also injects `PaymentProcessingState` so downstream handlers can inspect what happened during verification/settlement.
 
 ```rust
-let output_schema = OutputSchema::builder()
-    .input(
-        Input::builder()
-            .discoverable(true)
-            .input_type(InputType::Http)
-            .method(InputMethod::Post)
+async fn payment_middleware(req: Request, next: Next) -> Response {
+    PaymentHandler::builder(RemoteFacilitatorClient::new_default(
+        std::env::var("FACILITATOR_URL")
+            .expect("FACILITATOR_URL not set")
+            .parse()
+            .expect("Invalid FACILITATOR_URL"),
+    ))
+    .add_payment(
+        ExactEvm::builder()
+            .asset(UsdcBase)
+            .amount(1000)
+            .pay_to(alloy_primitives::address!(
+                "0x17d2e11d0405fa8d0ad2dca6409c499c0132c017"
+            ))
+            .resource(
+                Resource::builder()
+                    .url(url!("http://localhost:3000/premium"))
+                    .description("")
+                    .mime_type("")
+                    .build(),
+            )
             .build(),
     )
-    .build();
-
-let payment_requirements = ExactEvmConfig::builder()
-    .asset(UsdcBase)
-    .amount(500)
-    .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
-    .resource(resource)
     .build()
-    .into_payment_requirements();
-
-let response = process_payment(
-    &facilitator,
-    raw_x_payment_header,
-    vec![payment_requirements],
-)
-.await?;
+    .handle_payment()
+    .req(req)
+    .next(next)
+    .call()
+    .await
+    .map(|success| success.into_response())
+    .unwrap_or_else(|err| err.into_response())
+}
 ```
 
-The helper returns a typed settle response that can be echoed back via the `X-Payment-Response` header, proving the requester paid before the premium payload is delivered.
+### 2. Seller toolkit helper (`examples/seller_toolkit.rs`, `POST /premium`)
 
-### 2. Facilitator types override (`POST /fto`)
+```bash
+FACILITATOR_URL=https://your-facilitator.example \
+  cargo run -p x402-kit --example seller_toolkit
+```
 
-This route demonstrates overriding the default facilitator request/response types so you can match bespoke facilitator contracts while still reusing the same payment requirement definition.
+This example shows how to call the lower-level toolkit directly from within a route. It defines a discoverable HTTP resource, builds Exact EVM payment requirements, and hands the inbound headers to `process_payment`. The response that comes back is echoed via `X-Payment-Response`, proving payment to the caller.
 
 ```rust
+let resource = Resource::builder()
+    .url(url!("http://0.0.0.0:3000/premium"))
+    .description("Premium content")
+    .mime_type("application/json")
+    .output_schema(OutputSchema::discoverable_http_post())
+    .build();
+
+let payment_requirements = ExactEvm::builder()
+    .asset(UsdcBase)
+    .amount(500)
+    .pay_to(alloy_primitives::address!(
+        "0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"
+    ))
+    .resource(resource)
+    .build()
+    .into();
+
+let facilitator = RemoteFacilitatorClient::new_default(facilitator_url);
+
+let result = process_payment(&facilitator, req.headers(), vec![payment_requirements])
+    .await
+    .map_err(|err| {
+        (
+            err.status,
+            Json(serde_json::to_value(err.into_payment_requirements_response()).unwrap()),
+        )
+    })?;
+
+let mut response = (
+    StatusCode::CREATED,
+    Json(serde_json::json!({"message": "Premium content accessed"})),
+)
+    .into_response();
+
+if let Some(header_value) = Base64EncodedHeader::try_from(result)
+    .ok()
+    .and_then(|encoded| encoded.to_string().parse().ok())
+{
+    response.headers_mut().insert("X-Payment-Response", header_value);
+}
+```
+
+### Custom facilitator payloads
+
+If your facilitator expects bespoke request/response bodies, override them via the `with_*_type` helpers while still reusing the same payment definitions and tooling:
+
+```rust
+#[derive(Serialize, Deserialize)]
+struct CustomSettleRequest { /* ... */ }
+
 #[derive(Deserialize)]
 struct CustomSettleResponse { /* ... */ }
 
@@ -111,8 +147,5 @@ let facilitator = RemoteFacilitatorClient::new_default(facilitator_url)
     .with_settle_response_type::<CustomSettleResponse>();
 ```
 
-With custom serialization in place you can still invoke `process_payment` exactly the same way, keeping business logic identical while swapping transport formats.
+With custom serialization in place you can continue calling `process_payment` (or the middleware builder) unchanged while swapping transport formats.
 
-## Mission
-
-Build a fully modular X402 SDK that makes complex payment scenarios simple.
