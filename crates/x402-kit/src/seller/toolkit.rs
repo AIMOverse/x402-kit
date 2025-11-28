@@ -152,6 +152,7 @@ pub async fn verify_payment<F: Facilitator>(
         .try_into()
         .map_err(|err| ErrorResponse::invalid_payment(err, payment_requirements))?;
 
+    #[cfg(feature = "tracing")]
     tracing::debug!(
         "Verifying payment for scheme={}, network={}",
         selected.scheme,
