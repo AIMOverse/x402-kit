@@ -6,7 +6,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 use solana_pubkey::{ParsePubkeyError, Pubkey};
 
-use crate::concepts::{Address, NetworkFamily, Signature};
+use crate::concepts::{Address, NetworkFamily};
 
 pub struct SvmNetwork(pub &'static str);
 
@@ -108,10 +108,6 @@ impl<'de> Deserialize<'de> for SvmSignature {
         let sig = solana_signature::Signature::from_str(&s).map_err(serde::de::Error::custom)?;
         Ok(SvmSignature(sig))
     }
-}
-
-impl Signature for SvmSignature {
-    type Network = SvmNetwork;
 }
 
 impl Address for SvmAddress {

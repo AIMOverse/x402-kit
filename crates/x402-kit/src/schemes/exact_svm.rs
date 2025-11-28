@@ -33,9 +33,11 @@ impl<A: ExplicitSvmAsset> ExactSvm<A> {
             extra: None,
         }
     }
+}
 
-    pub fn into_payment_requirements(self) -> PaymentRequirements {
-        self.into_config().into()
+impl<A: ExplicitSvmAsset> From<ExactSvm<A>> for PaymentRequirements {
+    fn from(value: ExactSvm<A>) -> Self {
+        value.into_config().into()
     }
 }
 
@@ -44,11 +46,10 @@ pub struct ExactSvmScheme(pub SvmNetwork);
 impl Scheme for ExactSvmScheme {
     type Network = SvmNetwork;
     type Payload = ExplicitSvmPayload;
+    const SCHEME_NAME: &'static str = "exact";
+
     fn network(&self) -> &Self::Network {
         &self.0
-    }
-    fn scheme_name(&self) -> &str {
-        "exact"
     }
 }
 
@@ -65,6 +66,7 @@ mod tests {
 
     use crate::{
         config::Resource, networks::svm::assets::UsdcSolanaDevnet, schemes::exact_svm::ExactSvm,
+        transport::PaymentRequirements,
     };
 
     #[test]
@@ -74,21 +76,21 @@ mod tests {
             .description("Payment for services".to_string())
             .mime_type("application/json".to_string())
             .build();
-        let config = ExactSvm::builder()
+        let pr: PaymentRequirements = ExactSvm::builder()
             .asset(UsdcSolanaDevnet)
             .amount(1000)
             .pay_to(pubkey!("Ge3jkza5KRfXvaq3GELNLh6V1pjjdEKNpEdGXJgjjKUR"))
             .resource(resource)
             .build()
-            .into_payment_requirements();
+            .into();
 
-        assert_eq!(config.scheme, "exact");
-        assert_eq!(config.network, "solana-devnet");
-        assert_eq!(config.max_amount_required, 1000u64.into());
+        assert_eq!(pr.scheme, "exact");
+        assert_eq!(pr.network, "solana-devnet");
+        assert_eq!(pr.max_amount_required, 1000u64.into());
         assert_eq!(
-            config.resource,
+            pr.resource,
             Url::parse("https://example.com/payment").unwrap()
         );
-        assert!(config.extra.is_none());
+        assert!(pr.extra.is_none());
     }
 }

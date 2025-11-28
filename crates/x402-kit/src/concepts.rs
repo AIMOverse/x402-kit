@@ -23,16 +23,12 @@ pub trait Address: FromStr + Display + Copy {
     type Network: NetworkFamily;
 }
 
-pub trait Signature: FromStr + Display + Copy {
-    type Network: NetworkFamily;
-}
-
 /// A payment scheme applied to a network family.
 pub trait Scheme {
     type Network: NetworkFamily;
     type Payload;
+    const SCHEME_NAME: &'static str;
 
-    fn scheme_name(&self) -> &str;
     fn network(&self) -> &Self::Network;
 
     fn select<A: Address<Network = Self::Network>>(
@@ -42,7 +38,7 @@ pub trait Scheme {
     where
         Self: Sized,
     {
-        if pr.scheme == self.scheme_name() && pr.network == self.network().network_name() {
+        if pr.scheme == Self::SCHEME_NAME && pr.network == self.network().network_name() {
             Some(PaymentSelection {
                 max_amount_required: pr.max_amount_required,
                 resource: pr.resource.clone(),

@@ -5,7 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::concepts::{Address, Asset, NetworkFamily, Signature};
+use crate::concepts::{Address, Asset, NetworkFamily};
 
 #[derive(Debug, Clone, Copy)]
 pub struct EvmNetwork {
@@ -119,10 +119,6 @@ impl From<alloy_primitives::Signature> for EvmSignature {
     fn from(sig: alloy_primitives::Signature) -> Self {
         EvmSignature(sig)
     }
-}
-
-impl Signature for EvmSignature {
-    type Network = EvmNetwork;
 }
 
 pub type EvmAsset = Asset<EvmAddress>;

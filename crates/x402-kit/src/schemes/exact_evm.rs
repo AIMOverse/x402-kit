@@ -123,13 +123,10 @@ pub struct ExactEvmScheme(pub EvmNetwork);
 impl Scheme for ExactEvmScheme {
     type Network = EvmNetwork;
     type Payload = ExactEvmPayload;
+    const SCHEME_NAME: &'static str = "exact";
 
     fn network(&self) -> &Self::Network {
         &self.0
-    }
-
-    fn scheme_name(&self) -> &str {
-        "exact"
     }
 }
 

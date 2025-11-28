@@ -59,7 +59,7 @@ where
 {
     fn from(config: PaymentRequirementsConfig<S, A>) -> Self {
         PaymentRequirements {
-            scheme: config.scheme.scheme_name().to_string(),
+            scheme: S::SCHEME_NAME.to_string(),
             network: config.scheme.network().network_name().to_string(),
             max_amount_required: config.transport.amount,
             resource: config.transport.resource.url,
@@ -89,13 +89,10 @@ mod tests {
     impl Scheme for ExampleExactEvmScheme {
         type Network = EvmNetwork;
         type Payload = Value;
+        const SCHEME_NAME: &'static str = "exact";
 
         fn network(&self) -> &Self::Network {
             &self.0
-        }
-
-        fn scheme_name(&self) -> &str {
-            "exact"
         }
     }
 

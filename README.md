@@ -6,7 +6,7 @@ A fully modular, framework-agnostic, easy-to-extend SDK for building complex X40
 
 X402-kit is **not a facilitator** — it's a composable SDK for buyers (signers) and sellers (servers) to build custom business logic. Future support for modular facilitator components is planned.
 
-### Beyond Static Pricing
+### Beyond Static Pricing and Payment Gateway Middlewares
 
 Existing X402 SDKs only support static prices per API route. X402-kit's fully modular architecture enables complex, dynamic pricing logic while maximizing code reuse.
 
@@ -22,6 +22,8 @@ All internal fields and methods are public by design. Compose and extend functio
 ### Ship New Networks Without PRs
 
 Implement a new asset, network, or scheme entirely in your codebase and plug it into the SDK immediately—no upstream pull request or waiting period required thanks to trait-driven extension points.
+
+However, we still recommend contributing back any useful implementations to the main repository to help grow the ecosystem!
 
 ### Production-Ready Design
 
@@ -102,7 +104,7 @@ let payment_requirements = ExactEvm::builder()
     .build()
     .into();
 
-let facilitator = RemoteFacilitatorClient::new_default(facilitator_url);
+let facilitator = RemoteFacilitatorClient::from_url(facilitator_url);
 
 let result = process_payment(&facilitator, req.headers(), vec![payment_requirements])
     .await
@@ -127,13 +129,17 @@ if let Some(header_value) = Base64EncodedHeader::try_from(result)
 }
 ```
 
-### Custom facilitator payloads
+### Custom facilitator headers / payloads
 
 If your facilitator expects bespoke request/response bodies, override them via the `with_*_type` helpers while still reusing the same payment definitions and tooling:
 
 ```rust
 #[derive(Serialize, Deserialize)]
 struct CustomSettleRequest { /* ... */ }
+
+impl IntoVerifyResponse for DefaultVerifyResponse {
+    fn into_verify_response(self) -> FacilitatorVerifyResponse { /* ... */ }
+}
 
 #[derive(Deserialize)]
 struct CustomSettleResponse { /* ... */ }
@@ -142,10 +148,22 @@ impl IntoSettleResponse for CustomSettleResponse {
     fn into_settle_response(self) -> FacilitatorSettleResponse { /* ... */ }
 }
 
-let facilitator = RemoteFacilitatorClient::new_default(facilitator_url)
+let facilitator = RemoteFacilitatorClient::from_url(facilitator_url)
     .with_settle_request_type::<CustomSettleRequest>()
     .with_settle_response_type::<CustomSettleResponse>();
 ```
 
+For custom HTTP headers (e.g., API keys, authentication tokens), use `with_header`:
+
+```rust
+let facilitator = RemoteFacilitatorClient::from_url(facilitator_url)
+    .with_header("X-API-Key", "your-api-key")
+    .with_header("Authorization", "Bearer your-token");
+```
+
 With custom serialization in place you can continue calling `process_payment` (or the middleware builder) unchanged while swapping transport formats.
 
+# Acknowledgements
+
+[x402-rs](https://github.com/x402-rs/x402-rs) for providing the first facilitator and x402 SDK in rust
+[faremeter](https://github.com/faremeter/faremeter) for inpiring some of x402-kit's API design
