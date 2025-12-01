@@ -116,13 +116,23 @@ impl Address for SvmAddress {
 
 pub type SvmAsset = crate::concepts::Asset<SvmAddress>;
 
+/// Explicit SVM Network Trait. Each network must specify its network name.
 pub trait ExplicitSvmNetwork {
     const NETWORK: SvmNetwork;
 }
 
+/// Explicit SVM Asset Trait. Each asset must specify its associated network, asset details, and token program.
 pub trait ExplicitSvmAsset {
     type Network: ExplicitSvmNetwork;
     const ASSET: SvmAsset;
+    const TOKEN_PROGRAM: TokenProgram = TokenProgram::SplToken;
+}
+
+/// Explicit SVM Token's Program Enum
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum TokenProgram {
+    SplToken,
+    SplToken2022,
 }
 
 pub mod networks {
