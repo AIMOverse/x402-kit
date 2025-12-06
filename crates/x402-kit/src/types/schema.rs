@@ -66,11 +66,8 @@ impl<I: IntoIterator<Item = &'static str>> From<I> for FieldRequired {
 
 #[derive(Builder, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Input {
+pub struct HttpInput {
     pub discoverable: bool,
-
-    #[serde(rename = "type")]
-    pub input_type: InputType,
 
     pub method: Method,
 
@@ -102,17 +99,26 @@ pub struct Input {
     pub header_fields: Option<Record<FieldDefinition>>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum InputType {
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum Input {
     #[serde(rename = "http")]
-    Http,
+    Http(HttpInput),
+}
+
+impl Input {
+    pub fn as_http(&self) -> Option<&HttpInput> {
+        match self {
+            Input::Http(http_input) => Some(http_input),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Method {
-    #[serde(rename = "get")]
+    #[serde(rename = "GET")]
     Get,
-    #[serde(rename = "post")]
+    #[serde(rename = "POST")]
     Post,
 }
 
@@ -145,27 +151,25 @@ pub struct OutputSchema {
 }
 
 impl OutputSchema {
-    pub fn discoverable_http_get() -> Self {
+    pub fn http_get_discoverable() -> Self {
         Self::builder()
-            .input(
-                Input::builder()
-                    .input_type(InputType::Http)
+            .input(Input::Http(
+                HttpInput::builder()
                     .method(Method::Get)
                     .discoverable(true)
                     .build(),
-            )
+            ))
             .build()
     }
 
-    pub fn discoverable_http_post() -> Self {
+    pub fn http_post_discoverable() -> Self {
         Self::builder()
-            .input(
-                Input::builder()
-                    .input_type(InputType::Http)
+            .input(Input::Http(
+                HttpInput::builder()
                     .method(Method::Post)
                     .discoverable(true)
                     .build(),
-            )
+            ))
             .build()
     }
 }
@@ -177,53 +181,54 @@ mod tests {
     use super::*;
 
     fn setup_complex_input() -> Input {
-        Input::builder()
-            .input_type(InputType::Http)
-            .method(Method::Post)
-            .discoverable(true)
-            .body_type(InputBodyType::Json)
-            .header_fields([(
-                "example_header",
-                FieldDefinition::builder()
-                    .description("An example header")
-                    .field_type("string")
-                    .required(Required)
-                    .build(),
-            )])
-            .query_params([(
-                "exmple_query",
-                FieldDefinition::builder()
-                    .description("An example query parameter")
-                    .field_type("string")
-                    .build(),
-            )])
-            .body_fields([(
-                "example",
-                FieldDefinition::builder()
-                    .description("An example field")
-                    .field_type("string")
-                    .required(["nested_field", "nested_field2"])
-                    .properties([
-                        (
-                            "nested_field",
-                            FieldDefinition::builder()
-                                .field_type("number")
-                                .description("A nested field")
-                                .required(Required)
-                                .build(),
-                        ),
-                        (
-                            "nested_field2",
-                            FieldDefinition::builder()
-                                .field_type("string")
-                                .description("Optional nested field")
-                                .field_enum(["a", "b", "c"])
-                                .build(),
-                        ),
-                    ])
-                    .build(),
-            )])
-            .build()
+        Input::Http(
+            HttpInput::builder()
+                .method(Method::Post)
+                .discoverable(true)
+                .body_type(InputBodyType::Json)
+                .header_fields([(
+                    "example_header",
+                    FieldDefinition::builder()
+                        .description("An example header")
+                        .field_type("string")
+                        .required(Required)
+                        .build(),
+                )])
+                .query_params([(
+                    "exmple_query",
+                    FieldDefinition::builder()
+                        .description("An example query parameter")
+                        .field_type("string")
+                        .build(),
+                )])
+                .body_fields([(
+                    "example",
+                    FieldDefinition::builder()
+                        .description("An example field")
+                        .field_type("string")
+                        .required(["nested_field", "nested_field2"])
+                        .properties([
+                            (
+                                "nested_field",
+                                FieldDefinition::builder()
+                                    .field_type("number")
+                                    .description("A nested field")
+                                    .required(Required)
+                                    .build(),
+                            ),
+                            (
+                                "nested_field2",
+                                FieldDefinition::builder()
+                                    .field_type("string")
+                                    .description("Optional nested field")
+                                    .field_enum(["a", "b", "c"])
+                                    .build(),
+                            ),
+                        ])
+                        .build(),
+                )])
+                .build(),
+        )
     }
 
     #[test]
@@ -344,10 +349,9 @@ mod tests {
 
     #[test]
     fn discoverable_helpers() {
-        let get_schema = OutputSchema::discoverable_http_get();
-        assert!(matches!(get_schema.input.input_type, InputType::Http));
-        assert_eq!(get_schema.input.method, Method::Get);
-        assert!(get_schema.input.discoverable);
+        let get_schema = OutputSchema::http_get_discoverable();
+        assert!(get_schema.input.as_http().unwrap().discoverable);
+        assert_eq!(get_schema.input.as_http().unwrap().method, Method::Get);
 
         let get_schema_json = json!({
             "input": {
@@ -359,10 +363,9 @@ mod tests {
 
         assert_eq!(serde_json::to_value(&get_schema).unwrap(), get_schema_json);
 
-        let post_schema = OutputSchema::discoverable_http_post();
-        assert!(matches!(post_schema.input.input_type, InputType::Http));
-        assert_eq!(post_schema.input.method, Method::Post);
-        assert!(post_schema.input.discoverable);
+        let post_schema = OutputSchema::http_post_discoverable();
+        assert_eq!(post_schema.input.as_http().unwrap().method, Method::Post);
+        assert!(post_schema.input.as_http().unwrap().discoverable);
 
         let post_schema_json = json!({
             "input": {

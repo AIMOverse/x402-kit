@@ -47,7 +47,7 @@ async fn premium_content(
         .url(url!("http://0.0.0.0:3000/premium"))
         .description("Premium content")
         .mime_type("application/json")
-        .output_schema(OutputSchema::discoverable_http_post())
+        .output_schema(OutputSchema::http_post_discoverable())
         .build();
 
     // Define payment requirements for each transport
