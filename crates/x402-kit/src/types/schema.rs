@@ -238,7 +238,7 @@ mod tests {
         let input_json = json!({
             "discoverable": true,
             "type": "http",
-            "method": "post",
+            "method": "POST",
             "bodyType": "json",
             "headerFields": {
                 "example_header": {
@@ -297,7 +297,7 @@ mod tests {
             "input": {
                 "discoverable": true,
                 "type": "http",
-                "method": "post",
+                "method": "POST",
                 "bodyType": "json",
                 "headerFields": {
                     "example_header": {
@@ -357,7 +357,7 @@ mod tests {
             "input": {
                 "discoverable": true,
                 "type": "http",
-                "method": "get"
+                "method": "GET"
             }
         });
 
@@ -371,7 +371,7 @@ mod tests {
             "input": {
                 "discoverable": true,
                 "type": "http",
-                "method": "post"
+                "method": "POST"
             }
         });
 

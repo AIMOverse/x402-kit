@@ -368,34 +368,29 @@ mod tests {
         .unwrap();
 
         // EVM chains: "supported" doesn't include "extra" field, but payment requirements do
-        let payment_requirements = serde_json::from_str(
-            "[
-    {
-      \"scheme\": \"exact\",
-      \"network\": \"base\",
-      \"maxAmountRequired\": \"100\",
-      \"resource\": \"https://devnet.aimo.network/api/v1/chat/completions\",
-      \"description\": \"LLM Generation endpoint\",
-      \"mimeType\": \"application/json\",
-      \"payTo\": \"0xD14cE79C13CE71a853eF3E8BD75969d4BDEE39c1\",
-      \"maxTimeoutSeconds\": 60,
-      \"asset\": \"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913\",
-      \"outputSchema\": {
-        \"input\": {
-          \"discoverable\": true,
-          \"type\": \"http\",
-          \"method\": \"post\"
-        }
-      },
-      \"extra\": {
-        \"name\": \"USD Coin\",
-        \"version\": \"2\"
-      }
-    }
-  ]",
-        )
+        let payment_requirements = serde_json::from_value(serde_json::json!([{
+            "scheme": "exact",
+            "network": "base",
+            "maxAmountRequired": "100",
+            "resource": "https://devnet.aimo.network/api/v1/chat/completions",
+            "description": "LLM Generation endpoint",
+            "mimeType": "application/json",
+            "payTo": "0xD14cE79C13CE71a853eF3E8BD75969d4BDEE39c1",
+            "maxTimeoutSeconds": 60,
+            "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            "outputSchema": {
+                "input": {
+                    "discoverable": true,
+                    "type": "http",
+                    "method": "POST"
+                }
+            },
+            "extra": {
+                "name": "USD Coin",
+                "version": "2"
+            }
+        }]))
         .unwrap();
-
         // Expect the final filtered item to include the "extra" field from payment requirements
         let filtered = filter_supported_kinds(&supported, payment_requirements);
         assert_eq!(filtered.len(), 1);
@@ -421,7 +416,7 @@ mod tests {
         \"input\": {
           \"discoverable\": true,
           \"type\": \"http\",
-          \"method\": \"post\"
+          \"method\": \"POST\"
         }
       }
     }
@@ -454,7 +449,7 @@ mod tests {
         \"input\": {
           \"discoverable\": true,
           \"type\": \"http\",
-          \"method\": \"post\"
+          \"method\": \"POST\"
         }
       },
       \"extra\": {
