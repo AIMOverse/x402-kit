@@ -7,12 +7,13 @@ use axum::{
     routing::post,
 };
 use http::StatusCode;
+use solana_pubkey::pubkey;
 use url_macro::url;
 use x402_kit::{
     config::Resource,
     facilitator_client::RemoteFacilitatorClient,
-    networks::evm::assets::UsdcBase,
-    schemes::exact_evm::ExactEvm,
+    networks::{evm::assets::UsdcBase, svm::assets::UsdcSolana},
+    schemes::{exact_evm::ExactEvm, exact_svm::ExactSvm},
     seller::axum::{PaymentHandler, PaymentProcessingState},
 };
 
@@ -21,10 +22,19 @@ async fn main() {
     tracing_subscriber::fmt::init();
 
     // build our application with a route
-    let app = Router::new().route(
-        "/premium",
-        post(premium_content).layer(from_fn(payment_middleware)),
-    );
+    let app = Router::new()
+        .route(
+            "/premium/evm",
+            post(premium_content).layer(from_fn(payment_middleware)),
+        )
+        .route(
+            "/premium/solana",
+            post(premium_content).layer(from_fn(payment_middleware_svm)),
+        )
+        .route(
+            "/premium/hybrid",
+            post(premium_content).layer(from_fn(payment_middleware_hybrid)),
+        );
 
     // run our app with hyper, listening globally on port 3000
     tracing::info!("Listening on http://0.0.0.0:3000");
@@ -51,6 +61,76 @@ async fn payment_middleware(req: Request, next: Next) -> Response {
                     .mime_type("")
                     .build(),
             )
+            .build(),
+    )
+    .build()
+    .handle_payment()
+    .req(req)
+    .next(next)
+    .call()
+    .await
+    .map(|r| r.into_response())
+    .unwrap_or_else(|err| err.into_response())
+}
+
+async fn payment_middleware_svm(req: Request, next: Next) -> Response {
+    PaymentHandler::builder(RemoteFacilitatorClient::from_url(
+        std::env::var("FACILITATOR_URL")
+            .expect("FACILITATOR_URL not set")
+            .parse()
+            .expect("Invalid FACILITATOR_URL"),
+    ))
+    .add_payment(
+        ExactSvm::builder()
+            .asset(UsdcSolana)
+            .amount(1000)
+            .pay_to(pubkey!("Ge3jkza5KRfXvaq3GELNLh6V1pjjdEKNpEdGXJgjjKUR"))
+            .resource(
+                Resource::builder()
+                    .url(url!("http://localhost:3000/premium/solana"))
+                    .description("")
+                    .mime_type("")
+                    .build(),
+            )
+            .build(),
+    )
+    .build()
+    .handle_payment()
+    .req(req)
+    .next(next)
+    .call()
+    .await
+    .map(|r| r.into_response())
+    .unwrap_or_else(|err| err.into_response())
+}
+
+async fn payment_middleware_hybrid(req: Request, next: Next) -> Response {
+    let resource = Resource::builder()
+        .url(url!("http://localhost:3000/premium/hybrid"))
+        .description("")
+        .mime_type("")
+        .build();
+
+    PaymentHandler::builder(RemoteFacilitatorClient::from_url(
+        std::env::var("FACILITATOR_URL")
+            .expect("FACILITATOR_URL not set")
+            .parse()
+            .expect("Invalid FACILITATOR_URL"),
+    ))
+    .add_payment(
+        ExactEvm::builder()
+            .asset(UsdcBase)
+            .amount(1000)
+            .pay_to(address!("0x17d2e11d0405fa8d0ad2dca6409c499c0132c017"))
+            .resource(resource.clone())
+            .build(),
+    )
+    .add_payment(
+        ExactSvm::builder()
+            .asset(UsdcSolana)
+            .amount(1000)
+            .pay_to(pubkey!("Ge3jkza5KRfXvaq3GELNLh6V1pjjdEKNpEdGXJgjjKUR"))
+            .resource(resource)
             .build(),
     )
     .build()
