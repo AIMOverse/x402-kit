@@ -42,7 +42,7 @@
 //!     .description("Premium content access")
 //!     .mime_type("application/json")
 //!     // Make the endpoint discoverable with facilitators
-//!     .output_schema(OutputSchema::discoverable_http_post())
+//!     .output_schema(OutputSchema::http_post_discoverable())
 //!     .build();
 //! ```
 //!
