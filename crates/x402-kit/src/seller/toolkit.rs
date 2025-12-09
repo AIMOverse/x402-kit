@@ -235,8 +235,6 @@ pub async fn process_payment<F: Facilitator>(
     let x_payment_header = extract_payment_payload(headers, &payment_requirements)?;
     let selected = select_payment_with_payload(&payment_requirements, &x_payment_header)?;
 
-    // Allow unused variables when tracing is disabled
-    #[allow(unused_variables)]
     let valid = verify_payment(
         facilitator,
         &x_payment_header,
@@ -264,11 +262,17 @@ pub async fn process_payment<F: Facilitator>(
         settle_response.transaction
     );
 
+    let payer = if settle_response.payer.is_empty() && !valid.payer.is_empty() {
+        valid.payer
+    } else {
+        settle_response.payer
+    };
+
     Ok(PaymentResponse {
         success: true,
         transaction: settle_response.transaction,
         network: settle_response.network,
-        payer: settle_response.payer,
+        payer,
     })
 }
 
