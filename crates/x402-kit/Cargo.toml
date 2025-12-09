@@ -1,6 +1,6 @@
 [package]
 name = "x402-kit"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2024"
 repository = "https://github.com/AIMOverse/x402-kit"
 authors = ["Archer <archer@aimo.network>"]
