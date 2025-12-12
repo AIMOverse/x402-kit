@@ -1,4 +1,5 @@
 pub mod facilitator;
+pub mod signer;
 pub mod transport;
 
 #[cfg(feature = "seller")]

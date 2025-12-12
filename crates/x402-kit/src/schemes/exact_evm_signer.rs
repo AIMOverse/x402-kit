@@ -7,7 +7,7 @@ use alloy_signer::{Error as AlloySignerError, Signer as AlloySigner};
 use serde::Deserialize;
 
 use crate::{
-    core::{Payment, Scheme, SchemeSigner},
+    core::{PaymentSelection, Scheme, SchemeSigner},
     networks::evm::{EvmAddress, EvmSignature, ExplicitEvmAsset, ExplicitEvmNetwork},
     schemes::exact_evm::*,
 };
@@ -89,7 +89,7 @@ where
 
     async fn sign(
         &self,
-        selected: &Payment<Self::Scheme, EvmAddress>,
+        selected: &PaymentSelection<EvmAddress>,
     ) -> Result<<Self::Scheme as Scheme>::Payload, Self::Error> {
         let now = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)?
@@ -167,13 +167,12 @@ mod tests {
             .mime_type("application/json".to_string())
             .build();
 
-        let payment = Payment {
-            scheme: ExactEvmScheme(BaseSepolia::NETWORK),
+        let payment = PaymentSelection {
             amount: 1000u64.into(),
             resource,
             pay_to: EvmAddress(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20")),
             max_timeout_seconds: 60,
-            asset: UsdcBaseSepolia::ASSET,
+            asset: UsdcBaseSepolia::ASSET.address,
             extra: Some(json!({
                 "name": "USD Coin",
                 "version": "2"

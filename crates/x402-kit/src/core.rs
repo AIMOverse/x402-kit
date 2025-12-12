@@ -15,15 +15,19 @@ pub trait NetworkFamily {
 
 /// Network-specific address type.
 pub trait Address: FromStr + Display + Copy {
+    /// The network family this address belongs to.
     type Network: NetworkFamily;
 }
 
 /// A payment scheme applied to a network family.
 pub trait Scheme {
+    /// The network family this scheme applies to.
     type Network: NetworkFamily;
+    /// The payload type produced by this scheme.
     type Payload;
+    /// The name of the scheme.
     const SCHEME_NAME: &'static str;
-
+    /// Get the concrete network for this scheme.
     fn network(&self) -> &Self::Network;
 
     // fn select<A: Address<Network = Self::Network>>(
@@ -60,13 +64,14 @@ pub struct Asset<A: Address> {
     pub symbol: &'static str,
 }
 
-/// Payment requirements configuration for a given scheme and transport.
-#[derive(Builder, Debug, Clone)]
+/// Payment configuration for a given scheme and transport.
+#[derive(Builder)]
 pub struct Payment<S, A>
 where
     S: Scheme,
     A: Address<Network = S::Network>,
 {
+    /// The payment scheme.
     pub scheme: S,
     /// The address to use for payments.
     #[builder(into)]
@@ -79,8 +84,29 @@ where
     pub amount: AmountValue,
     /// Maximum timeout in seconds for the payment to be completed.
     pub max_timeout_seconds: u64,
+    /// Optional extra data for the payment.
     pub extra: Option<AnyJson>,
-    /// Resource configuration.
+    /// Resource definition.
+    pub resource: Resource,
+}
+
+/// Payment configuration for a given scheme and transport.
+#[derive(Builder)]
+pub struct PaymentSelection<A: Address> {
+    /// The address to use for payments.
+    #[builder(into)]
+    pub pay_to: A,
+    /// The asset for the payment
+    #[builder(into)]
+    pub asset: A,
+    /// The amount of the asset to pay, in smallest units.
+    #[builder(into)]
+    pub amount: AmountValue,
+    /// Maximum timeout in seconds for the payment to be completed.
+    pub max_timeout_seconds: u64,
+    /// Optional extra data for the payment.
+    pub extra: Option<AnyJson>,
+    /// Resource definition.
     pub resource: Resource,
 }
 
@@ -91,11 +117,11 @@ pub trait SchemeSigner<A: Address<Network = <Self::Scheme as Scheme>::Network>> 
 
     fn sign(
         &self,
-        selected: &Payment<Self::Scheme, A>,
+        payment: &PaymentSelection<A>,
     ) -> impl Future<Output = Result<<Self::Scheme as Scheme>::Payload, Self::Error>>;
 }
 
-/// Resource configuration.
+/// Resource definition.
 #[derive(Builder, Debug, Clone, PartialEq, Eq)]
 pub struct Resource {
     /// Optional resource URL.
