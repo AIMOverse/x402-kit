@@ -329,8 +329,12 @@
 
 pub mod core;
 pub mod errors;
+pub mod facilitator;
 pub mod networks;
 pub mod schemes;
 pub mod transport;
 pub mod types;
 pub mod v1;
+
+#[cfg(feature = "facilitator-client")]
+pub mod facilitator_client;

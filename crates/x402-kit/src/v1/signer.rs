@@ -1,7 +1,6 @@
-use serde_json::json;
-
 use crate::{
     core::{Address, NetworkFamily, PaymentSelection, Resource, Scheme},
+    types::Record,
     v1,
 };
 
@@ -23,7 +22,7 @@ impl<S: Scheme, A: Address<Network = S::Network>> PaymentSelector<S, A> for S {
                 max_timeout_seconds: pr.max_timeout_seconds,
                 asset: pr.asset.parse().ok()?,
                 extra: pr.extra.clone(),
-                extensions: json!({}),
+                extensions: Record::new(),
             })
         } else {
             None

@@ -147,7 +147,7 @@ mod tests {
     use crate::{
         core::Resource,
         networks::evm::{assets::UsdcBaseSepolia, networks::BaseSepolia},
-        types::AmountValue,
+        types::{AmountValue, Record},
     };
 
     use super::*;
@@ -177,7 +177,7 @@ mod tests {
                 "name": "USD Coin",
                 "version": "2"
             })),
-            extensions: json!({}),
+            extensions: Record::new(),
         };
 
         let payload = evm_signer

@@ -5,7 +5,7 @@ use std::{fmt::Display, str::FromStr};
 use bon::Builder;
 use url::Url;
 
-use crate::types::{AmountValue, AnyJson, OutputSchema};
+use crate::types::{AmountValue, AnyJson, Extension, OutputSchema, Record};
 
 /// A series of network families, e.g. EVM, SVM, etc.
 pub trait NetworkFamily {
@@ -116,7 +116,7 @@ pub struct PaymentSelection<A: Address> {
     pub resource: Resource,
     /// Extensions
     #[builder(default)]
-    pub extensions: AnyJson,
+    pub extensions: Record<Extension>,
 }
 
 /// Signer for a given payment scheme.
