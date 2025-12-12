@@ -61,9 +61,8 @@ async fn premium_content(
         .pay_to(alloy_primitives::address!(
             "0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"
         ))
-        .resource(resource)
         .build()
-        .v1();
+        .v1_with_resource(resource);
 
     // Create facilitator client
     let facilitator = RemoteFacilitatorClient::from_url(facilitator_url);

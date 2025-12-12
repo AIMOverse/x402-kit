@@ -331,6 +331,7 @@ pub mod core;
 pub mod errors;
 pub mod facilitator;
 pub mod networks;
+pub mod paywall;
 pub mod schemes;
 pub mod transport;
 pub mod types;

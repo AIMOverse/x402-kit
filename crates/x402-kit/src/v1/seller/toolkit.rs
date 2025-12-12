@@ -3,7 +3,7 @@ use std::fmt::Display;
 use http::{HeaderMap, StatusCode};
 
 use crate::{
-    types::{Base64EncodedHeader, X402Version},
+    types::{Base64EncodedHeader, X402V1},
     v1::facilitator::{
         Facilitator, FacilitatorPaymentRequest, FacilitatorPaymentRequestPayload,
         FacilitatorSettleFailed, FacilitatorSettleResponse, FacilitatorSettleSuccess,
@@ -26,7 +26,7 @@ pub struct ErrorResponse {
 impl ErrorResponse {
     pub fn into_payment_requirements_response(self) -> PaymentRequirementsResponse {
         PaymentRequirementsResponse {
-            x402_version: X402Version::V1,
+            x402_version: X402V1,
             error: self.error,
             accepts: self.accepts,
         }

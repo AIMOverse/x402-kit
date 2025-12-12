@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::{
-    core::{Address, NetworkFamily, Payment, Scheme},
-    types::{AmountValue, AnyJson, Base64EncodedHeader, OutputSchema, X402Version},
+    core::{Address, NetworkFamily, Payment, Resource, Scheme},
+    types::{AmountValue, AnyJson, Base64EncodedHeader, OutputSchema, X402V1},
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,7 +39,7 @@ pub struct PaymentRequirements {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaymentPayload {
-    pub x402_version: X402Version,
+    pub x402_version: X402V1,
     pub scheme: String,
     pub network: String,
     pub payload: AnyJson,
@@ -48,7 +48,7 @@ pub struct PaymentPayload {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaymentRequirementsResponse {
-    pub x402_version: X402Version,
+    pub x402_version: X402V1,
     pub error: String,
     pub accepts: Vec<PaymentRequirements>,
 }
@@ -104,23 +104,24 @@ impl TryFrom<Base64EncodedHeader> for PaymentResponse {
     }
 }
 
-impl<S, A> From<Payment<S, A>> for PaymentRequirements
+impl<S, A> From<(Payment<S, A>, Resource)> for PaymentRequirements
 where
     S: Scheme,
     A: Address<Network = S::Network>,
 {
-    fn from(payment: Payment<S, A>) -> Self {
+    fn from(value: (Payment<S, A>, Resource)) -> Self {
+        let (payment, resource) = value;
         PaymentRequirements {
             scheme: S::SCHEME_NAME.to_string(),
             network: payment.scheme.network().network_name().to_string(),
             max_amount_required: payment.amount,
-            resource: payment.resource.url,
-            description: payment.resource.description,
-            mime_type: payment.resource.mime_type,
+            resource: resource.url,
+            description: resource.description,
+            mime_type: resource.mime_type,
             pay_to: payment.pay_to.to_string(),
             max_timeout_seconds: payment.max_timeout_seconds,
             asset: payment.asset.address.to_string(),
-            output_schema: payment.resource.output_schema,
+            output_schema: resource.output_schema,
             extra: payment.extra,
         }
     }
@@ -166,11 +167,10 @@ mod tests {
             .asset(UsdcBaseSepolia)
             .max_timeout_seconds(300)
             .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
-            .resource(resource)
             .scheme(ExampleExactEvmScheme(BaseSepolia::NETWORK))
             .build();
 
-        let payment_requirements = PaymentRequirements::from(config);
+        let payment_requirements = PaymentRequirements::from((config, resource));
 
         assert_eq!(payment_requirements.scheme, "exact");
         assert_eq!(payment_requirements.network, "base-sepolia");

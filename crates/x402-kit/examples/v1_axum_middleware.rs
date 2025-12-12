@@ -54,15 +54,14 @@ async fn payment_middleware(req: Request, next: Next) -> Response {
             .asset(UsdcBase)
             .amount(1000)
             .pay_to(address!("0x17d2e11d0405fa8d0ad2dca6409c499c0132c017"))
-            .resource(
+            .build()
+            .v1_with_resource(
                 Resource::builder()
                     .url(url!("http://localhost:3000/premium"))
                     .description("")
                     .mime_type("")
                     .build(),
-            )
-            .build()
-            .v1(),
+            ),
     )
     .build()
     .handle_payment()
@@ -86,15 +85,14 @@ async fn payment_middleware_svm(req: Request, next: Next) -> Response {
             .asset(UsdcSolana)
             .amount(1000)
             .pay_to(pubkey!("Ge3jkza5KRfXvaq3GELNLh6V1pjjdEKNpEdGXJgjjKUR"))
-            .resource(
+            .build()
+            .v1_with_resource(
                 Resource::builder()
                     .url(url!("http://localhost:3000/premium/solana"))
                     .description("")
                     .mime_type("")
                     .build(),
-            )
-            .build()
-            .v1(),
+            ),
     )
     .build()
     .handle_payment()
@@ -124,18 +122,16 @@ async fn payment_middleware_hybrid(req: Request, next: Next) -> Response {
             .asset(UsdcBase)
             .amount(1000)
             .pay_to(address!("0x17d2e11d0405fa8d0ad2dca6409c499c0132c017"))
-            .resource(resource.clone())
             .build()
-            .v1(),
+            .v1_with_resource(resource.clone()),
     )
     .add_payment(
         ExactSvm::builder()
             .asset(UsdcSolana)
             .amount(1000)
             .pay_to(pubkey!("Ge3jkza5KRfXvaq3GELNLh6V1pjjdEKNpEdGXJgjjKUR"))
-            .resource(resource)
             .build()
-            .v1(),
+            .v1_with_resource(resource.clone()),
     )
     .build()
     .handle_payment()

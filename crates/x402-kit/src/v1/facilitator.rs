@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    types::{AnyJson, Base64EncodedHeader, X402Version},
+    types::{AnyJson, Base64EncodedHeader, X402V1},
     v1::transport::{PaymentPayload, PaymentRequirements, PaymentResponse},
 };
 
@@ -84,7 +84,7 @@ pub struct FacilitatorSettleFailed {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FacilitatorSupportedKinds {
-    pub x402_version: X402Version,
+    pub x402_version: X402V1,
     pub scheme: String,
     pub network: String,
     pub extra: Option<AnyJson>,

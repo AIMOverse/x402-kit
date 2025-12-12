@@ -1,8 +1,13 @@
+use std::fmt::Debug;
+
 use base64::{Engine, prelude::BASE64_STANDARD};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::types::{AmountValue, AnyJson, Base64EncodedHeader, X402Version};
+use crate::{
+    core::{Address, NetworkFamily, Payment, Resource, Scheme},
+    types::{AmountValue, AnyJson, Base64EncodedHeader, Extension, Record, X402V2},
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -24,14 +29,72 @@ pub struct PaymentResource {
     pub mime_type: String,
 }
 
+impl From<Resource> for PaymentResource {
+    fn from(resource: Resource) -> Self {
+        PaymentResource {
+            url: resource.url,
+            description: resource.description,
+            mime_type: resource.mime_type,
+        }
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct Accepts(Vec<PaymentRequirements>);
+
+impl IntoIterator for Accepts {
+    type Item = PaymentRequirements;
+    type IntoIter = std::vec::IntoIter<PaymentRequirements>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl Serialize for Accepts {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Accepts {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let vec = Vec::<PaymentRequirements>::deserialize(deserializer)?;
+        Ok(Accepts(vec))
+    }
+}
+
+impl Debug for Accepts {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        format!("{:?}", self.0).fmt(f)
+    }
+}
+
+impl Accepts {
+    pub fn add(mut self, payment: impl Into<PaymentRequirements>) -> Self {
+        self.0.push(payment.into());
+        self
+    }
+
+    pub fn new() -> Self {
+        Accepts(Vec::new())
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaymentRequired {
-    pub x402_version: X402Version,
+    pub x402_version: X402V2,
     pub error: String,
     pub resource: PaymentResource,
-    pub accepts: Vec<PaymentRequirements>,
-    pub extensions: AnyJson,
+    pub accepts: Accepts,
+    pub extensions: Record<Extension>,
 }
 
 impl TryFrom<PaymentRequired> for Base64EncodedHeader {
@@ -60,7 +123,7 @@ impl TryFrom<Base64EncodedHeader> for PaymentRequired {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaymentPayload {
-    pub x402_version: X402Version,
+    pub x402_version: X402V2,
     pub resource: PaymentResource,
     pub accepted: PaymentRequirements,
     pub payload: AnyJson,
@@ -118,5 +181,23 @@ impl TryFrom<Base64EncodedHeader> for SettlementResponse {
         let json_str = String::from_utf8(decoded_bytes)?;
         let response = serde_json::from_str(&json_str)?;
         Ok(response)
+    }
+}
+
+impl<S, A> From<Payment<S, A>> for PaymentRequirements
+where
+    S: Scheme,
+    A: Address<Network = S::Network>,
+{
+    fn from(payment: Payment<S, A>) -> Self {
+        PaymentRequirements {
+            scheme: S::SCHEME_NAME.to_string(),
+            network: payment.scheme.network().network_id().to_string(),
+            amount: payment.amount,
+            asset: payment.asset.address.to_string(),
+            pay_to: payment.pay_to.to_string(),
+            max_timeout_seconds: payment.max_timeout_seconds,
+            extra: payment.extra,
+        }
     }
 }

@@ -229,15 +229,14 @@ mod tests {
                 .asset(UsdcBase)
                 .amount(1000_000)
                 .pay_to(address!("0x17d2e11d0405fa8d0ad2dca6409c499c0132c017"))
-                .resource(
-                    Resource::builder()
-                        .url(url!("https://my-site.com/api"))
-                        .description("")
-                        .mime_type("")
-                        .build(),
-                )
                 .build()
-                .v1(),
+                .v1_with_resource(
+                    Resource::builder()
+                        .url(url!("http://localhost:3000/premium"))
+                        .description("Premium content")
+                        .mime_type("application/json")
+                        .build(),
+                ),
         )
         .build()
         .handle_payment()

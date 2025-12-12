@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     core::{Payment, Resource, Scheme},
     networks::evm::{EvmAddress, EvmNetwork, EvmSignature, ExplicitEvmAsset, ExplicitEvmNetwork},
-    types::{AmountValue, AnyJson, Record},
+    types::{AmountValue, AnyJson},
 };
 
 use std::{
@@ -135,7 +135,6 @@ pub struct ExactEvm<A: ExplicitEvmAsset> {
     pub pay_to: EvmAddress,
     pub amount: u64,
     pub max_timeout_seconds_override: Option<u64>,
-    pub resource: Resource,
     pub extra_override: Option<AnyJson>,
 }
 
@@ -150,19 +149,17 @@ where
             asset: A::ASSET,
             amount: scheme.amount.into(),
             max_timeout_seconds: scheme.max_timeout_seconds_override.unwrap_or(60),
-            resource: scheme.resource,
             extra: scheme
                 .extra_override
                 .or(A::EIP712_DOMAIN.and_then(|v| serde_json::to_value(v).ok())),
-            extensions: Record::new(),
         }
     }
 }
 
 impl<A: ExplicitEvmAsset> ExactEvm<A> {
     #[cfg(feature = "v1")]
-    pub fn v1(self) -> crate::v1::transport::PaymentRequirements {
-        crate::v1::transport::PaymentRequirements::from(Payment::from(self))
+    pub fn v1_with_resource(self, resource: Resource) -> crate::v1::transport::PaymentRequirements {
+        crate::v1::transport::PaymentRequirements::from((Payment::from(self), resource))
     }
 }
 
@@ -187,9 +184,8 @@ mod tests {
             .asset(UsdcBaseSepolia)
             .amount(1000)
             .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
-            .resource(resource)
             .build();
-        let payment_requirements = scheme.v1();
+        let payment_requirements = scheme.v1_with_resource(resource);
 
         assert_eq!(payment_requirements.scheme, "exact");
         assert_eq!(
@@ -210,9 +206,8 @@ mod tests {
             .asset(UsdcBaseSepolia)
             .amount(1000)
             .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
-            .resource(resource.clone())
             .build()
-            .v1();
+            .v1_with_resource(resource.clone());
 
         assert!(pr.extra.is_some());
         assert_eq!(
@@ -224,10 +219,9 @@ mod tests {
             .asset(UsdcBaseSepolia)
             .amount(1000)
             .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
-            .resource(resource)
             .extra_override(json!({"foo": "bar"}))
             .build()
-            .v1();
+            .v1_with_resource(resource.clone());
 
         assert_eq!(pr.extra, Some(json!({"foo": "bar"})));
     }

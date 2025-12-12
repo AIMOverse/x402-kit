@@ -89,11 +89,6 @@ where
     pub max_timeout_seconds: u64,
     /// Optional extra data for the payment.
     pub extra: Option<AnyJson>,
-    /// Resource definition.
-    pub resource: Resource,
-    /// Extensions
-    #[builder(default)]
-    pub extensions: Record<Extension>,
 }
 
 /// Payment configuration for a given scheme and transport.
