@@ -23,6 +23,7 @@ jobs:
           - "svm-signer"
           - "seller"
           - "axum"
+          - "v1"
           - "all" # marker for all features
     steps:
       - uses: actions/checkout@v6
