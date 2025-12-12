@@ -2,13 +2,13 @@ use http::{HeaderMap, HeaderName, HeaderValue};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::{
-    concepts::Facilitator,
-    transport::{
-        FacilitatorPaymentRequest, FacilitatorSettleFailed, FacilitatorSettleResponse,
+use crate::v1::{
+    facilitator::{
+        Facilitator, FacilitatorPaymentRequest, FacilitatorSettleFailed, FacilitatorSettleResponse,
         FacilitatorSettleSuccess, FacilitatorSupportedResponse, FacilitatorVerifyInvalid,
-        FacilitatorVerifyResponse, FacilitatorVerifyValid, PaymentPayload, PaymentRequirements,
+        FacilitatorVerifyResponse, FacilitatorVerifyValid,
     },
+    transport::{PaymentPayload, PaymentRequirements},
 };
 
 /// A remote facilitator client that communicates over HTTP.

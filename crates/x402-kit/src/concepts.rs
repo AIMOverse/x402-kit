@@ -4,13 +4,7 @@ use std::{fmt::Display, str::FromStr};
 
 use url::Url;
 
-use crate::{
-    transport::{
-        FacilitatorPaymentRequest, FacilitatorSettleResponse, FacilitatorSupportedResponse,
-        FacilitatorVerifyResponse, PaymentRequirements,
-    },
-    types::{AmountValue, AnyJson, OutputSchema},
-};
+use crate::types::{AmountValue, AnyJson, OutputSchema};
 
 /// A series of network families, e.g. EVM, SVM, etc.
 pub trait NetworkFamily {
@@ -31,29 +25,29 @@ pub trait Scheme {
 
     fn network(&self) -> &Self::Network;
 
-    fn select<A: Address<Network = Self::Network>>(
-        &self,
-        pr: &PaymentRequirements,
-    ) -> Option<PaymentSelection<A>>
-    where
-        Self: Sized,
-    {
-        if pr.scheme == Self::SCHEME_NAME && pr.network == self.network().network_name() {
-            Some(PaymentSelection {
-                max_amount_required: pr.max_amount_required,
-                resource: pr.resource.clone(),
-                description: pr.description.clone(),
-                mime_type: pr.mime_type.clone(),
-                pay_to: pr.pay_to.parse().ok()?,
-                max_timeout_seconds: pr.max_timeout_seconds,
-                asset: pr.asset.parse().ok()?,
-                output_schema: pr.output_schema.clone(),
-                extra: pr.extra.clone(),
-            })
-        } else {
-            None
-        }
-    }
+    // fn select<A: Address<Network = Self::Network>>(
+    //     &self,
+    //     pr: &PaymentRequirements,
+    // ) -> Option<PaymentSelection<A>>
+    // where
+    //     Self: Sized,
+    // {
+    //     if pr.scheme == Self::SCHEME_NAME && pr.network == self.network().network_name() {
+    //         Some(PaymentSelection {
+    //             max_amount_required: pr.max_amount_required,
+    //             resource: pr.resource.clone(),
+    //             description: pr.description.clone(),
+    //             mime_type: pr.mime_type.clone(),
+    //             pay_to: pr.pay_to.parse().ok()?,
+    //             max_timeout_seconds: pr.max_timeout_seconds,
+    //             asset: pr.asset.parse().ok()?,
+    //             output_schema: pr.output_schema.clone(),
+    //             extra: pr.extra.clone(),
+    //         })
+    //     } else {
+    //         None
+    //     }
+    // }
 }
 
 /// Represents an asset on a given address.
@@ -97,21 +91,4 @@ pub trait SchemeSigner<A: Address<Network = <Self::Scheme as Scheme>::Network>> 
         &self,
         selected: &PaymentSelection<A>,
     ) -> impl Future<Output = Result<<Self::Scheme as Scheme>::Payload, Self::Error>>;
-}
-
-/// X402 facilitator interface.
-pub trait Facilitator {
-    type Error: std::error::Error;
-
-    fn supported(&self) -> impl Future<Output = Result<FacilitatorSupportedResponse, Self::Error>>;
-
-    fn verify(
-        &self,
-        request: FacilitatorPaymentRequest,
-    ) -> impl Future<Output = Result<FacilitatorVerifyResponse, Self::Error>>;
-
-    fn settle(
-        &self,
-        request: FacilitatorPaymentRequest,
-    ) -> impl Future<Output = Result<FacilitatorSettleResponse, Self::Error>>;
 }

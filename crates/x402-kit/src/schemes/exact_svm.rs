@@ -5,7 +5,6 @@ use crate::{
     concepts::Scheme,
     config::{PaymentRequirementsConfig, Resource, TransportConfig},
     networks::svm::{ExplicitSvmAsset, ExplicitSvmNetwork, SvmAddress, SvmNetwork},
-    transport::PaymentRequirements,
 };
 
 #[derive(Builder, Debug, Clone)]
@@ -35,12 +34,6 @@ impl<A: ExplicitSvmAsset> ExactSvm<A> {
     }
 }
 
-impl<A: ExplicitSvmAsset> From<ExactSvm<A>> for PaymentRequirements {
-    fn from(value: ExactSvm<A>) -> Self {
-        value.into_config().into()
-    }
-}
-
 pub struct ExactSvmScheme(pub SvmNetwork);
 
 impl Scheme for ExactSvmScheme {
@@ -66,7 +59,7 @@ mod tests {
 
     use crate::{
         config::Resource, networks::svm::assets::UsdcSolanaDevnet, schemes::exact_svm::ExactSvm,
-        transport::PaymentRequirements,
+        v1::transport::PaymentRequirements,
     };
 
     #[test]
@@ -82,6 +75,7 @@ mod tests {
             .pay_to(pubkey!("Ge3jkza5KRfXvaq3GELNLh6V1pjjdEKNpEdGXJgjjKUR"))
             .resource(resource)
             .build()
+            .into_config()
             .into();
 
         assert_eq!(pr.scheme, "exact");

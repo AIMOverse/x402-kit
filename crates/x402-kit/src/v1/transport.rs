@@ -4,7 +4,11 @@ use base64::{Engine, prelude::BASE64_STANDARD};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::types::{AmountValue, AnyJson, OutputSchema, X402Version};
+use crate::{
+    concepts::{Address, NetworkFamily, Scheme},
+    config::PaymentRequirementsConfig,
+    types::{AmountValue, AnyJson, OutputSchema, X402Version},
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -52,97 +56,6 @@ pub struct PaymentRequirementsResponse {
     pub accepts: Vec<PaymentRequirements>,
 }
 
-#[derive(Debug, Clone)]
-pub struct FacilitatorPaymentRequest {
-    pub payload: FacilitatorPaymentRequestPayload,
-    pub x_payment_header: Base64EncodedHeader,
-}
-
-#[derive(Debug, Clone)]
-pub struct FacilitatorPaymentRequestPayload {
-    pub payment_payload: PaymentPayload,
-    pub payment_requirements: PaymentRequirements,
-}
-
-#[derive(Debug, Clone)]
-pub enum FacilitatorVerifyResponse {
-    Valid(FacilitatorVerifyValid),
-    Invalid(FacilitatorVerifyInvalid),
-}
-
-impl FacilitatorVerifyResponse {
-    pub fn is_valid(&self) -> bool {
-        matches!(self, FacilitatorVerifyResponse::Valid(_))
-    }
-
-    pub fn valid(valid: FacilitatorVerifyValid) -> Self {
-        FacilitatorVerifyResponse::Valid(valid)
-    }
-
-    pub fn invalid(invalid: FacilitatorVerifyInvalid) -> Self {
-        FacilitatorVerifyResponse::Invalid(invalid)
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FacilitatorVerifyValid {
-    pub payer: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FacilitatorVerifyInvalid {
-    pub invalid_reason: String,
-    pub payer: Option<String>,
-}
-
-#[derive(Debug, Clone)]
-pub enum FacilitatorSettleResponse {
-    Success(FacilitatorSettleSuccess),
-    Failed(FacilitatorSettleFailed),
-}
-
-impl FacilitatorSettleResponse {
-    pub fn is_success(&self) -> bool {
-        matches!(self, FacilitatorSettleResponse::Success(_))
-    }
-
-    pub fn success(success: FacilitatorSettleSuccess) -> Self {
-        FacilitatorSettleResponse::Success(success)
-    }
-
-    pub fn failed(failed: FacilitatorSettleFailed) -> Self {
-        FacilitatorSettleResponse::Failed(failed)
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FacilitatorSettleSuccess {
-    pub payer: String,
-    pub transaction: String,
-    pub network: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FacilitatorSettleFailed {
-    pub error_reason: String,
-    pub payer: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FacilitatorSupportedKinds {
-    pub x402_version: X402Version,
-    pub scheme: String,
-    pub network: String,
-    pub extra: Option<AnyJson>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FacilitatorSupportedResponse {
-    pub kinds: Vec<FacilitatorSupportedKinds>,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaymentResponse {
@@ -150,17 +63,6 @@ pub struct PaymentResponse {
     pub transaction: String,
     pub network: String,
     pub payer: String,
-}
-
-impl From<FacilitatorSettleSuccess> for PaymentResponse {
-    fn from(success: FacilitatorSettleSuccess) -> Self {
-        PaymentResponse {
-            success: true,
-            transaction: success.transaction,
-            network: success.network,
-            payer: success.payer,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -230,5 +132,98 @@ impl TryFrom<Base64EncodedHeader> for PaymentResponse {
         let json_str = String::from_utf8(decoded_bytes)?;
         let response = serde_json::from_str(&json_str)?;
         Ok(response)
+    }
+}
+
+impl<S, A> From<PaymentRequirementsConfig<S, A>> for PaymentRequirements
+where
+    S: Scheme,
+    A: Address<Network = S::Network>,
+{
+    fn from(config: PaymentRequirementsConfig<S, A>) -> Self {
+        PaymentRequirements {
+            scheme: S::SCHEME_NAME.to_string(),
+            network: config.scheme.network().network_name().to_string(),
+            max_amount_required: config.transport.amount,
+            resource: config.transport.resource.url,
+            description: config.transport.resource.description,
+            mime_type: config.transport.resource.mime_type,
+            pay_to: config.transport.pay_to.to_string(),
+            max_timeout_seconds: config.transport.max_timeout_seconds,
+            asset: config.transport.asset.address.to_string(),
+            output_schema: config.transport.resource.output_schema,
+            extra: config.extra,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use alloy_primitives::address;
+    use serde_json::Value;
+
+    use crate::{
+        config::{Resource, TransportConfig},
+        networks::evm::{
+            EvmNetwork, ExplicitEvmAsset, ExplicitEvmNetwork, assets::UsdcBaseSepolia,
+            networks::BaseSepolia,
+        },
+    };
+
+    struct ExampleExactEvmScheme(EvmNetwork);
+
+    impl Scheme for ExampleExactEvmScheme {
+        type Network = EvmNetwork;
+        type Payload = Value;
+        const SCHEME_NAME: &'static str = "exact";
+
+        fn network(&self) -> &Self::Network {
+            &self.0
+        }
+    }
+
+    use super::*;
+
+    #[test]
+    fn test_configure_payment_requirements() {
+        let resource = Resource::builder()
+            .url(Url::parse("https://example.com/payment").unwrap())
+            .description("Payment for services".to_string())
+            .mime_type("application/json".to_string())
+            .build();
+
+        let config = PaymentRequirementsConfig::builder()
+            .transport(
+                TransportConfig::builder()
+                    .amount(1000u64)
+                    .asset(UsdcBaseSepolia)
+                    .max_timeout_seconds(300)
+                    .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
+                    .resource(resource)
+                    .build(),
+            )
+            .scheme(ExampleExactEvmScheme(BaseSepolia::NETWORK))
+            .build();
+
+        let payment_requirements = PaymentRequirements::from(config);
+
+        assert_eq!(payment_requirements.scheme, "exact");
+        assert_eq!(payment_requirements.network, "base-sepolia");
+        assert_eq!(payment_requirements.max_amount_required, 1000u64.into());
+        assert_eq!(
+            payment_requirements.resource,
+            Url::parse("https://example.com/payment").unwrap()
+        );
+        assert_eq!(payment_requirements.description, "Payment for services");
+        assert_eq!(payment_requirements.mime_type, "application/json");
+        assert_eq!(
+            payment_requirements.pay_to,
+            "0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"
+        );
+        assert_eq!(payment_requirements.max_timeout_seconds, 300);
+        assert_eq!(
+            payment_requirements.asset,
+            UsdcBaseSepolia::ASSET.address.to_string()
+        );
     }
 }

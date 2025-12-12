@@ -11,10 +11,10 @@ use solana_pubkey::pubkey;
 use url_macro::url;
 use x402_kit::{
     config::Resource,
-    facilitator_client::RemoteFacilitatorClient,
     networks::{evm::assets::UsdcBase, svm::assets::UsdcSolana},
     schemes::{exact_evm::ExactEvm, exact_svm::ExactSvm},
-    seller::axum::{PaymentHandler, PaymentProcessingState},
+    v1::facilitator_client::RemoteFacilitatorClient,
+    v1::seller::axum::{PaymentHandler, PaymentProcessingState},
 };
 
 #[tokio::main]
@@ -61,7 +61,8 @@ async fn payment_middleware(req: Request, next: Next) -> Response {
                     .mime_type("")
                     .build(),
             )
-            .build(),
+            .build()
+            .v1(),
     )
     .build()
     .handle_payment()
@@ -92,7 +93,8 @@ async fn payment_middleware_svm(req: Request, next: Next) -> Response {
                     .mime_type("")
                     .build(),
             )
-            .build(),
+            .build()
+            .into_config(),
     )
     .build()
     .handle_payment()
@@ -123,7 +125,8 @@ async fn payment_middleware_hybrid(req: Request, next: Next) -> Response {
             .amount(1000)
             .pay_to(address!("0x17d2e11d0405fa8d0ad2dca6409c499c0132c017"))
             .resource(resource.clone())
-            .build(),
+            .build()
+            .v1(),
     )
     .add_payment(
         ExactSvm::builder()
@@ -131,7 +134,8 @@ async fn payment_middleware_hybrid(req: Request, next: Next) -> Response {
             .amount(1000)
             .pay_to(pubkey!("Ge3jkza5KRfXvaq3GELNLh6V1pjjdEKNpEdGXJgjjKUR"))
             .resource(resource)
-            .build(),
+            .build()
+            .into_config(),
     )
     .build()
     .handle_payment()

@@ -5,23 +5,20 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
-use crate::{
-    concepts::Facilitator,
+use crate::v1::{
+    facilitator::{Facilitator, FacilitatorSettleSuccess, FacilitatorVerifyValid},
     seller::toolkit::{
         extract_payment_payload, select_payment_with_payload, settle_payment,
         update_supported_kinds, verify_payment,
     },
-    transport::{
-        Base64EncodedHeader, FacilitatorSettleSuccess, FacilitatorVerifyValid, PaymentRequirements,
-        PaymentResponse,
-    },
+    transport::{Base64EncodedHeader, PaymentRequirements, PaymentResponse},
 };
 
 #[derive(Debug, Clone)]
-pub struct PaymentErrorResponse(pub crate::seller::toolkit::ErrorResponse);
+pub struct PaymentErrorResponse(pub super::toolkit::ErrorResponse);
 
-impl From<crate::seller::toolkit::ErrorResponse> for PaymentErrorResponse {
-    fn from(err: crate::seller::toolkit::ErrorResponse) -> Self {
+impl From<super::toolkit::ErrorResponse> for PaymentErrorResponse {
+    fn from(err: super::toolkit::ErrorResponse) -> Self {
         PaymentErrorResponse(err)
     }
 }
@@ -211,8 +208,8 @@ mod tests {
     use url_macro::url;
 
     use crate::{
-        config::Resource, facilitator_client::RemoteFacilitatorClient,
-        networks::evm::assets::UsdcBase, schemes::exact_evm::ExactEvm,
+        config::Resource, networks::evm::assets::UsdcBase, schemes::exact_evm::ExactEvm,
+        v1::facilitator_client::RemoteFacilitatorClient,
     };
 
     use super::*;
@@ -236,7 +233,8 @@ mod tests {
                         .mime_type("")
                         .build(),
                 )
-                .build(),
+                .build()
+                .v1(),
         )
         .build()
         .handle_payment()

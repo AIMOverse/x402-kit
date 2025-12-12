@@ -3,15 +3,17 @@ use std::fmt::Display;
 use http::{HeaderMap, StatusCode};
 
 use crate::{
-    concepts::Facilitator,
-    transport::{
-        Base64EncodedHeader, FacilitatorPaymentRequest, FacilitatorPaymentRequestPayload,
+    types::X402Version,
+    v1::facilitator::{
+        Facilitator, FacilitatorPaymentRequest, FacilitatorPaymentRequestPayload,
         FacilitatorSettleFailed, FacilitatorSettleResponse, FacilitatorSettleSuccess,
         FacilitatorSupportedResponse, FacilitatorVerifyInvalid, FacilitatorVerifyResponse,
-        FacilitatorVerifyValid, PaymentPayload, PaymentRequirements, PaymentRequirementsResponse,
+        FacilitatorVerifyValid,
+    },
+    v1::transport::{
+        Base64EncodedHeader, PaymentPayload, PaymentRequirements, PaymentRequirementsResponse,
         PaymentResponse,
     },
-    types::X402Version,
 };
 
 /// Structured error response for payment processing.
