@@ -15,6 +15,7 @@ default = [
     "svm-signer",
     "seller",
     "axum",
+    "v1",
 ]
 facilitator-client = ["dep:reqwest", "dep:http"]
 tracing = ["dep:tracing"]
@@ -22,6 +23,7 @@ evm-signer = ["dep:alloy-core", "dep:alloy-signer", "dep:rand"]
 svm-signer = ["dep:bincode"]
 seller = ["dep:http"]
 axum = ["seller", "dep:tower", "dep:axum"]
+v1 = []
 
 [dependencies]
 # === Core Deps ===

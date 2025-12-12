@@ -1,12 +1,10 @@
 use bon::Builder;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
 use crate::{
     core::{Payment, Resource, Scheme},
     networks::evm::{EvmAddress, EvmNetwork, EvmSignature, ExplicitEvmAsset, ExplicitEvmNetwork},
-    types::{AmountValue, AnyJson},
-    v1,
+    types::{AmountValue, AnyJson, Record},
 };
 
 use std::{
@@ -156,14 +154,15 @@ where
             extra: scheme
                 .extra_override
                 .or(A::EIP712_DOMAIN.and_then(|v| serde_json::to_value(v).ok())),
-            extensions: json!({}),
+            extensions: Record::new(),
         }
     }
 }
 
 impl<A: ExplicitEvmAsset> ExactEvm<A> {
-    pub fn v1(self) -> v1::transport::PaymentRequirements {
-        v1::transport::PaymentRequirements::from(Payment::from(self))
+    #[cfg(feature = "v1")]
+    pub fn v1(self) -> crate::v1::transport::PaymentRequirements {
+        crate::v1::transport::PaymentRequirements::from(Payment::from(self))
     }
 }
 

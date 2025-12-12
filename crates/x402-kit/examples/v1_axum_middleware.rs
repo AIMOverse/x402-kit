@@ -94,7 +94,7 @@ async fn payment_middleware_svm(req: Request, next: Next) -> Response {
                     .build(),
             )
             .build()
-            .into_config(),
+            .v1(),
     )
     .build()
     .handle_payment()
@@ -135,7 +135,7 @@ async fn payment_middleware_hybrid(req: Request, next: Next) -> Response {
             .pay_to(pubkey!("Ge3jkza5KRfXvaq3GELNLh6V1pjjdEKNpEdGXJgjjKUR"))
             .resource(resource)
             .build()
-            .into_config(),
+            .v1(),
     )
     .build()
     .handle_payment()

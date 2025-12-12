@@ -93,7 +93,7 @@ where
     pub resource: Resource,
     /// Extensions
     #[builder(default)]
-    pub extensions: AnyJson,
+    pub extensions: Record<Extension>,
 }
 
 /// Payment configuration for a given scheme and transport.

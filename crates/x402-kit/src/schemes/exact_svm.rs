@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     core::{Payment, Resource, Scheme},
     networks::svm::{ExplicitSvmAsset, ExplicitSvmNetwork, SvmAddress, SvmNetwork},
+    types::Record,
 };
 
 #[derive(Builder, Debug, Clone)]
@@ -16,18 +17,25 @@ pub struct ExactSvm<A: ExplicitSvmAsset> {
     pub resource: Resource,
 }
 
+impl<A: ExplicitSvmAsset> From<ExactSvm<A>> for Payment<ExactSvmScheme, SvmAddress> {
+    fn from(scheme: ExactSvm<A>) -> Self {
+        Payment {
+            scheme: ExactSvmScheme(A::Network::NETWORK),
+            pay_to: scheme.pay_to,
+            asset: A::ASSET,
+            amount: scheme.amount.into(),
+            max_timeout_seconds: scheme.max_timeout_seconds_override.unwrap_or(60),
+            resource: scheme.resource,
+            extra: None,
+            extensions: Record::new(),
+        }
+    }
+}
+
 impl<A: ExplicitSvmAsset> ExactSvm<A> {
-    pub fn into_config(self) -> Payment<ExactSvmScheme, SvmAddress> {
-        Payment::builder()
-            .scheme(ExactSvmScheme(A::Network::NETWORK))
-            .amount(self.amount)
-            .asset(A::ASSET)
-            .pay_to(self.pay_to)
-            .max_timeout_seconds(self.max_timeout_seconds_override.unwrap_or(60))
-            .resource(self.resource)
-            // Fee payer should be updated with facilitator's supported networks list
-            .maybe_extra(None)
-            .build()
+    #[cfg(feature = "v1")]
+    pub fn v1(self) -> crate::v1::transport::PaymentRequirements {
+        crate::v1::transport::PaymentRequirements::from(Payment::from(self))
     }
 }
 
@@ -56,7 +64,6 @@ mod tests {
 
     use crate::{
         core::Resource, networks::svm::assets::UsdcSolanaDevnet, schemes::exact_svm::ExactSvm,
-        v1::transport::PaymentRequirements,
     };
 
     #[test]
@@ -66,14 +73,13 @@ mod tests {
             .description("Payment for services".to_string())
             .mime_type("application/json".to_string())
             .build();
-        let pr: PaymentRequirements = ExactSvm::builder()
+        let pr: crate::v1::transport::PaymentRequirements = ExactSvm::builder()
             .asset(UsdcSolanaDevnet)
             .amount(1000)
             .pay_to(pubkey!("Ge3jkza5KRfXvaq3GELNLh6V1pjjdEKNpEdGXJgjjKUR"))
             .resource(resource)
             .build()
-            .into_config()
-            .into();
+            .v1();
 
         assert_eq!(pr.scheme, "exact");
         assert_eq!(pr.network, "solana-devnet");

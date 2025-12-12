@@ -334,6 +334,8 @@ pub mod networks;
 pub mod schemes;
 pub mod transport;
 pub mod types;
+
+#[cfg(feature = "v1")]
 pub mod v1;
 
 #[cfg(feature = "facilitator-client")]
