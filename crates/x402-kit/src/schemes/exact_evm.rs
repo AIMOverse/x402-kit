@@ -2,8 +2,7 @@ use bon::Builder;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    concepts::Scheme,
-    config::{PaymentRequirementsConfig, Resource, TransportConfig},
+    core::{Payment, Resource, Scheme},
     networks::evm::{EvmAddress, EvmNetwork, EvmSignature, ExplicitEvmAsset, ExplicitEvmNetwork},
     types::{AmountValue, AnyJson},
     v1,
@@ -141,20 +140,18 @@ pub struct ExactEvm<A: ExplicitEvmAsset> {
     pub extra_override: Option<AnyJson>,
 }
 
-impl<A> From<ExactEvm<A>> for PaymentRequirementsConfig<ExactEvmScheme, EvmAddress>
+impl<A> From<ExactEvm<A>> for Payment<ExactEvmScheme, EvmAddress>
 where
     A: ExplicitEvmAsset,
 {
     fn from(scheme: ExactEvm<A>) -> Self {
-        PaymentRequirementsConfig {
+        Payment {
             scheme: ExactEvmScheme(A::Network::NETWORK),
-            transport: TransportConfig {
-                pay_to: scheme.pay_to,
-                asset: A::ASSET,
-                amount: scheme.amount.into(),
-                max_timeout_seconds: scheme.max_timeout_seconds_override.unwrap_or(60),
-                resource: scheme.resource,
-            },
+            pay_to: scheme.pay_to,
+            asset: A::ASSET,
+            amount: scheme.amount.into(),
+            max_timeout_seconds: scheme.max_timeout_seconds_override.unwrap_or(60),
+            resource: scheme.resource,
             extra: scheme
                 .extra_override
                 .or(A::EIP712_DOMAIN.and_then(|v| serde_json::to_value(v).ok())),
@@ -164,7 +161,7 @@ where
 
 impl<A: ExplicitEvmAsset> ExactEvm<A> {
     pub fn v1(self) -> v1::transport::PaymentRequirements {
-        v1::transport::PaymentRequirements::from(PaymentRequirementsConfig::from(self))
+        v1::transport::PaymentRequirements::from(Payment::from(self))
     }
 }
 

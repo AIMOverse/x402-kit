@@ -208,7 +208,7 @@ mod tests {
     use url_macro::url;
 
     use crate::{
-        config::Resource, networks::evm::assets::UsdcBase, schemes::exact_evm::ExactEvm,
+        core::Resource, networks::evm::assets::UsdcBase, schemes::exact_evm::ExactEvm,
         v1::facilitator_client::RemoteFacilitatorClient,
     };
 

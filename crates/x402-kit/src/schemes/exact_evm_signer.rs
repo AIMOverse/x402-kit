@@ -7,7 +7,7 @@ use alloy_signer::{Error as AlloySignerError, Signer as AlloySigner};
 use serde::Deserialize;
 
 use crate::{
-    concepts::{PaymentSelection, Scheme, SchemeSigner},
+    core::{Payment, Scheme, SchemeSigner},
     networks::evm::{EvmAddress, EvmSignature, ExplicitEvmAsset, ExplicitEvmNetwork},
     schemes::exact_evm::*,
 };
@@ -89,7 +89,7 @@ where
 
     async fn sign(
         &self,
-        selected: &PaymentSelection<EvmAddress>,
+        selected: &Payment<Self::Scheme, EvmAddress>,
     ) -> Result<<Self::Scheme as Scheme>::Payload, Self::Error> {
         let now = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)?
@@ -111,7 +111,7 @@ where
         let authorization = ExactEvmAuthorization {
             from: selected.pay_to,
             to: selected.pay_to,
-            value: selected.max_amount_required,
+            value: selected.amount,
             // Valid after: now - 5mins
             valid_after: TimestampSeconds(now.saturating_sub(300)),
             valid_before: TimestampSeconds(now + selected.max_timeout_seconds),
@@ -145,6 +145,7 @@ mod tests {
     use url::Url;
 
     use crate::{
+        core::Resource,
         networks::evm::{assets::UsdcBaseSepolia, networks::BaseSepolia},
         types::AmountValue,
     };
@@ -160,15 +161,19 @@ mod tests {
             asset: UsdcBaseSepolia,
         };
 
-        let payment_selection = PaymentSelection {
-            max_amount_required: 1000u64.into(),
-            resource: Url::parse("https://example.com/payment").unwrap(),
-            description: "Test payment".to_string(),
-            mime_type: "application/json".to_string(),
+        let resource = Resource::builder()
+            .url(Url::parse("https://example.com/payment").unwrap())
+            .description("Payment for services".to_string())
+            .mime_type("application/json".to_string())
+            .build();
+
+        let payment = Payment {
+            scheme: ExactEvmScheme(BaseSepolia::NETWORK),
+            amount: 1000u64.into(),
+            resource,
             pay_to: EvmAddress(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20")),
             max_timeout_seconds: 60,
-            asset: UsdcBaseSepolia::ASSET.address,
-            output_schema: None,
+            asset: UsdcBaseSepolia::ASSET,
             extra: Some(json!({
                 "name": "USD Coin",
                 "version": "2"
@@ -176,7 +181,7 @@ mod tests {
         };
 
         let payload = evm_signer
-            .sign(&payment_selection)
+            .sign(&payment)
             .await
             .expect("Signing should succeed");
 

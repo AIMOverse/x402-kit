@@ -5,8 +5,7 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::{
-    concepts::{Address, NetworkFamily, Scheme},
-    config::PaymentRequirementsConfig,
+    core::{Address, NetworkFamily, Payment, Scheme},
     types::{AmountValue, AnyJson, OutputSchema, X402Version},
 };
 
@@ -135,24 +134,24 @@ impl TryFrom<Base64EncodedHeader> for PaymentResponse {
     }
 }
 
-impl<S, A> From<PaymentRequirementsConfig<S, A>> for PaymentRequirements
+impl<S, A> From<Payment<S, A>> for PaymentRequirements
 where
     S: Scheme,
     A: Address<Network = S::Network>,
 {
-    fn from(config: PaymentRequirementsConfig<S, A>) -> Self {
+    fn from(payment: Payment<S, A>) -> Self {
         PaymentRequirements {
             scheme: S::SCHEME_NAME.to_string(),
-            network: config.scheme.network().network_name().to_string(),
-            max_amount_required: config.transport.amount,
-            resource: config.transport.resource.url,
-            description: config.transport.resource.description,
-            mime_type: config.transport.resource.mime_type,
-            pay_to: config.transport.pay_to.to_string(),
-            max_timeout_seconds: config.transport.max_timeout_seconds,
-            asset: config.transport.asset.address.to_string(),
-            output_schema: config.transport.resource.output_schema,
-            extra: config.extra,
+            network: payment.scheme.network().network_name().to_string(),
+            max_amount_required: payment.amount,
+            resource: payment.resource.url,
+            description: payment.resource.description,
+            mime_type: payment.resource.mime_type,
+            pay_to: payment.pay_to.to_string(),
+            max_timeout_seconds: payment.max_timeout_seconds,
+            asset: payment.asset.address.to_string(),
+            output_schema: payment.resource.output_schema,
+            extra: payment.extra,
         }
     }
 }
@@ -163,7 +162,7 @@ mod tests {
     use serde_json::Value;
 
     use crate::{
-        config::{Resource, TransportConfig},
+        core::Resource,
         networks::evm::{
             EvmNetwork, ExplicitEvmAsset, ExplicitEvmNetwork, assets::UsdcBaseSepolia,
             networks::BaseSepolia,
@@ -192,16 +191,12 @@ mod tests {
             .mime_type("application/json".to_string())
             .build();
 
-        let config = PaymentRequirementsConfig::builder()
-            .transport(
-                TransportConfig::builder()
-                    .amount(1000u64)
-                    .asset(UsdcBaseSepolia)
-                    .max_timeout_seconds(300)
-                    .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
-                    .resource(resource)
-                    .build(),
-            )
+        let config = Payment::builder()
+            .amount(1000u64)
+            .asset(UsdcBaseSepolia)
+            .max_timeout_seconds(300)
+            .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
+            .resource(resource)
             .scheme(ExampleExactEvmScheme(BaseSepolia::NETWORK))
             .build();
 

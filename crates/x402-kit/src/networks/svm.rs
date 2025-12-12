@@ -6,7 +6,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 use solana_pubkey::{ParsePubkeyError, Pubkey};
 
-use crate::concepts::{Address, NetworkFamily};
+use crate::core::{Address, NetworkFamily};
 
 pub struct SvmNetwork(pub &'static str);
 
@@ -114,7 +114,7 @@ impl Address for SvmAddress {
     type Network = SvmNetwork;
 }
 
-pub type SvmAsset = crate::concepts::Asset<SvmAddress>;
+pub type SvmAsset = crate::core::Asset<SvmAddress>;
 
 pub trait ExplicitSvmNetwork {
     const NETWORK: SvmNetwork;

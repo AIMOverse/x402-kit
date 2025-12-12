@@ -10,7 +10,7 @@ use http::StatusCode;
 use solana_pubkey::pubkey;
 use url_macro::url;
 use x402_kit::{
-    config::Resource,
+    core::Resource,
     networks::{evm::assets::UsdcBase, svm::assets::UsdcSolana},
     schemes::{exact_evm::ExactEvm, exact_svm::ExactSvm},
     v1::facilitator_client::RemoteFacilitatorClient,

@@ -462,8 +462,7 @@
 //! ```
 //!
 
-pub mod concepts;
-pub mod config;
+pub mod core;
 pub mod errors;
 pub mod networks;
 pub mod schemes;

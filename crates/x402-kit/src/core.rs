@@ -2,6 +2,7 @@
 
 use std::{fmt::Display, str::FromStr};
 
+use bon::Builder;
 use url::Url;
 
 use crate::types::{AmountValue, AnyJson, OutputSchema};
@@ -59,27 +60,28 @@ pub struct Asset<A: Address> {
     pub symbol: &'static str,
 }
 
-/// Selected payment requirements for a given scheme and address type.
-#[derive(Debug, Clone)]
-pub struct PaymentSelection<A: Address> {
-    /// Maximum amount required for the payment in smallest units
-    pub max_amount_required: AmountValue,
-    /// Resource URL to fetch payment details
-    pub resource: Url,
-    /// Description of the resource
-    pub description: String,
-    /// MIME type of the payment payload
-    pub mime_type: String,
-    /// Destination address or account to pay to
+/// Payment requirements configuration for a given scheme and transport.
+#[derive(Builder, Debug, Clone)]
+pub struct Payment<S, A>
+where
+    S: Scheme,
+    A: Address<Network = S::Network>,
+{
+    pub scheme: S,
+    /// The address to use for payments.
+    #[builder(into)]
     pub pay_to: A,
-    /// Maximum timeout in seconds for the payment to be completed
+    /// The asset for the payment
+    #[builder(into)]
+    pub asset: Asset<A>,
+    /// The amount of the asset to pay, in smallest units.
+    #[builder(into)]
+    pub amount: AmountValue,
+    /// Maximum timeout in seconds for the payment to be completed.
     pub max_timeout_seconds: u64,
-    /// Asset address or identifier
-    pub asset: A,
-    /// Schema of the input / output payload
-    pub output_schema: Option<OutputSchema>,
-    /// Extra fields for extensibility
     pub extra: Option<AnyJson>,
+    /// Resource configuration.
+    pub resource: Resource,
 }
 
 /// Signer for a given payment scheme.
@@ -89,6 +91,21 @@ pub trait SchemeSigner<A: Address<Network = <Self::Scheme as Scheme>::Network>> 
 
     fn sign(
         &self,
-        selected: &PaymentSelection<A>,
+        selected: &Payment<Self::Scheme, A>,
     ) -> impl Future<Output = Result<<Self::Scheme as Scheme>::Payload, Self::Error>>;
+}
+
+/// Resource configuration.
+#[derive(Builder, Debug, Clone, PartialEq, Eq)]
+pub struct Resource {
+    /// Optional resource URL.
+    pub url: Url,
+    /// Optional description of the resource.
+    #[builder(into)]
+    pub description: String,
+    /// Optional MIME type of the resource.
+    #[builder(into)]
+    pub mime_type: String,
+    /// Optional output schema for the payment payload.
+    pub output_schema: Option<OutputSchema>,
 }

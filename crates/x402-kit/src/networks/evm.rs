@@ -5,7 +5,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::concepts::{Address, Asset, NetworkFamily};
+use crate::core::{Address, Asset, NetworkFamily};
 
 #[derive(Debug, Clone, Copy)]
 pub struct EvmNetwork {

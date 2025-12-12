@@ -8,7 +8,7 @@ use axum::{
 use url::Url;
 use url_macro::url;
 use x402_kit::{
-    config::Resource, networks::evm::assets::UsdcBase, schemes::exact_evm::ExactEvm,
+    core::Resource, networks::evm::assets::UsdcBase, schemes::exact_evm::ExactEvm,
     types::OutputSchema, v1::facilitator_client::RemoteFacilitatorClient,
     v1::seller::toolkit::process_payment, v1::transport::Base64EncodedHeader,
 };

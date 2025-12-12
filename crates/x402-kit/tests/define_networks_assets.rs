@@ -3,7 +3,7 @@ use std::{fmt::Display, str::FromStr};
 use alloy_primitives::address;
 use solana_pubkey::pubkey;
 use x402_kit::{
-    concepts::{Address, NetworkFamily},
+    core::{Address, NetworkFamily},
     networks::{
         evm::{
             Eip712Domain, EvmAddress, EvmAsset, EvmNetwork, ExplicitEvmAsset, ExplicitEvmNetwork,
@@ -145,7 +145,7 @@ fn test_define_network_family() {
         type Network = MyNetworkFamily;
     }
 
-    pub type _MyAsset = x402_kit::concepts::Asset<MyAddress>;
+    pub type _MyAsset = x402_kit::core::Asset<MyAddress>;
 
     let network = MyNetworkFamily {
         network_name: "my-network",

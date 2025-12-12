@@ -2,8 +2,7 @@ use bon::Builder;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    concepts::Scheme,
-    config::{PaymentRequirementsConfig, Resource, TransportConfig},
+    core::{Payment, Resource, Scheme},
     networks::svm::{ExplicitSvmAsset, ExplicitSvmNetwork, SvmAddress, SvmNetwork},
 };
 
@@ -18,19 +17,17 @@ pub struct ExactSvm<A: ExplicitSvmAsset> {
 }
 
 impl<A: ExplicitSvmAsset> ExactSvm<A> {
-    pub fn into_config(self) -> PaymentRequirementsConfig<ExactSvmScheme, SvmAddress> {
-        PaymentRequirementsConfig {
-            scheme: ExactSvmScheme(A::Network::NETWORK),
-            transport: TransportConfig::builder()
-                .amount(self.amount)
-                .asset(A::ASSET)
-                .pay_to(self.pay_to)
-                .max_timeout_seconds(self.max_timeout_seconds_override.unwrap_or(60))
-                .resource(self.resource)
-                .build(),
+    pub fn into_config(self) -> Payment<ExactSvmScheme, SvmAddress> {
+        Payment::builder()
+            .scheme(ExactSvmScheme(A::Network::NETWORK))
+            .amount(self.amount)
+            .asset(A::ASSET)
+            .pay_to(self.pay_to)
+            .max_timeout_seconds(self.max_timeout_seconds_override.unwrap_or(60))
+            .resource(self.resource)
             // Fee payer should be updated with facilitator's supported networks list
-            extra: None,
-        }
+            .maybe_extra(None)
+            .build()
     }
 }
 
@@ -58,7 +55,7 @@ mod tests {
     use url::Url;
 
     use crate::{
-        config::Resource, networks::svm::assets::UsdcSolanaDevnet, schemes::exact_svm::ExactSvm,
+        core::Resource, networks::svm::assets::UsdcSolanaDevnet, schemes::exact_svm::ExactSvm,
         v1::transport::PaymentRequirements,
     };
 
