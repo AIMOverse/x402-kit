@@ -91,6 +91,9 @@ where
     pub extra: Option<AnyJson>,
     /// Resource definition.
     pub resource: Resource,
+    /// Extensions
+    #[builder(default)]
+    pub extensions: AnyJson,
 }
 
 /// Payment configuration for a given scheme and transport.
@@ -111,6 +114,9 @@ pub struct PaymentSelection<A: Address> {
     pub extra: Option<AnyJson>,
     /// Resource definition.
     pub resource: Resource,
+    /// Extensions
+    #[builder(default)]
+    pub extensions: AnyJson,
 }
 
 /// Signer for a given payment scheme.

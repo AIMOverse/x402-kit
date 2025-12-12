@@ -177,6 +177,7 @@ mod tests {
                 "name": "USD Coin",
                 "version": "2"
             })),
+            extensions: json!({}),
         };
 
         let payload = evm_signer

@@ -1,5 +1,6 @@
 use bon::Builder;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 
 use crate::{
     core::{Payment, Resource, Scheme},
@@ -155,6 +156,7 @@ where
             extra: scheme
                 .extra_override
                 .or(A::EIP712_DOMAIN.and_then(|v| serde_json::to_value(v).ok())),
+            extensions: json!({}),
         }
     }
 }
