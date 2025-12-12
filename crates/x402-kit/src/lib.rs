@@ -1,6 +1,6 @@
 //! # X402 Kit
 //!
-//! X402 Kit is a A fully modular, framework-agnostic, easy-to-extend SDK for building complex X402 payment integrations.
+//! X402 Kit is a fully modular, framework-agnostic, easy-to-extend SDK for building complex X402 payment integrations.
 //!
 //! X402-kit is **not a facilitator** — it's a composable SDK for buyers (signers) and sellers (servers) to build custom business logic.
 //! Future support for modular facilitator components is planned.
@@ -9,9 +9,7 @@
 //!
 //! ### For the X402 Protocol
 //!
-//! - **[`concepts`]**: Core traits and types used across the X402 Kit.
-//! - **[`config`]**: Configuration types for defining resources and payment requirements.
-//! - **[`transport`]**: Types and traits for defining X402 transport mechanisms and facilitator interactions.
+//! - **[`core`]**: Core traits and types used across the X402 Kit, including resource configuration.
 //! - **[`types`]**: Common re-usable types for defining the X402 protocol.
 //!
 //! ### For Network-Specific Implementations
@@ -19,134 +17,9 @@
 //! - **[`networks`]**: Network-specific implementations, e.g., EVM / SVM assets and addresses.
 //! - **[`schemes`]**: Payment scheme implementations, e.g., Exact EVM / Exact SVM, and their signer logic.
 //!
-//! ### Commonly-Used Utilities
+//! ### Protocol Versions
 //!
-//! - **[`seller`]**: Utilities for building X402 sellers, including an Axum integration.
-//! - **[`facilitator_client`]**: Utilities for building X402 facilitator clients.
-//!
-//! ## Seller Guide
-//!
-//! ### Configuring Payment Requirements
-//!
-//! #### Resources
-//!
-//! A [`config::Resource`] defines the details of what is being sold, including its URL, description, MIME type, and optional output schema.
-//!
-//! ```
-//! use url_macro::url;
-//! use x402_kit::config::Resource;
-//! use x402_kit::types::OutputSchema;
-//!
-//! let resource = Resource::builder()
-//!     .url(url!("http://example.com/premium-content"))
-//!     .description("Premium content access")
-//!     .mime_type("application/json")
-//!     // Make the endpoint discoverable with facilitators
-//!     .output_schema(OutputSchema::http_post_discoverable())
-//!     .build();
-//! ```
-//!
-//! See unit tests under [`types::OutputSchema`] in the [GitHub repo](https://github.com/AIMOverse/x402-kit/blob/main/crates/x402-kit/src/types/schema.rs) for complex examples of defining input/output schemas.
-//!
-//! #### Schemes
-//!
-//! Choose a scheme for building payment requirements. For example, using the `ExactEvm` scheme:
-//!
-//! ```
-//! use alloy_primitives::address;
-//! use url_macro::url;
-//! use x402_kit::{
-//!     config::Resource,
-//!     networks::evm::assets::UsdcBase,
-//!     schemes::exact_evm::ExactEvm,
-//!     transport::PaymentRequirements,
-//! };
-//!
-//! # fn build_payment_requirements() {
-//!
-//! let resource = Resource::builder()
-//!     .url(url!("https://example.com/premium"))
-//!     .description("Premium content access")
-//!     .mime_type("application/json")
-//!     .build();
-//!
-//! let payment_requirements = ExactEvm::builder()
-//!     .asset(UsdcBase)
-//!     .amount(1000) // Amount in smallest units (e.g., 1000 = 0.001 USDC)
-//!     .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
-//!     .resource(resource)
-//!     .build();
-//!
-//! // Convert to PaymentRequirements for use with facilitator
-//! let requirements: PaymentRequirements = payment_requirements.into();
-//! # }
-//! ```
-//!
-//! ### Axum Integration
-//!
-//! As a seller, you might be interested in Axum integration for building an X402-enabled server.
-//! See [`seller::axum::PaymentHandler`] for more details.
-//!
-//! ```
-//! use alloy_primitives::address;
-//! use axum::{
-//!     Router,
-//!     extract::Request,
-//!     middleware::{Next, from_fn},
-//!     response::{IntoResponse, Response},
-//!     routing::post,
-//! };
-//! use url_macro::url;
-//! use x402_kit::{
-//!     config::Resource,
-//!     facilitator_client::RemoteFacilitatorClient,
-//!     networks::evm::assets::UsdcBase,
-//!     schemes::exact_evm::ExactEvm,
-//!     seller::axum::PaymentHandler,
-//! };
-//!
-//! async fn payment_middleware(req: Request, next: Next) -> Response {
-//!     PaymentHandler::builder(RemoteFacilitatorClient::from_url(
-//!         url!("https://facilitator.example.com"),
-//!     ))
-//!     .add_payment(
-//!         ExactEvm::builder()
-//!             .asset(UsdcBase)
-//!             .amount(1000)
-//!             .pay_to(address!("0x17d2e11d0405fa8d0ad2dca6409c499c0132c017"))
-//!             .resource(
-//!                 Resource::builder()
-//!                     .url(url!("http://localhost:3000/premium"))
-//!                     .description("Premium content")
-//!                     .mime_type("application/json")
-//!                     .build(),
-//!             )
-//!             .build(),
-//!     )
-//!     .build()
-//!     .handle_payment()
-//!     .req(req)
-//!     .next(next)
-//!     .call()
-//!     .await
-//!     .map(|r| r.into_response())
-//!     .unwrap_or_else(|err| err.into_response())
-//! }
-//!
-//! # async fn create_app() -> Router {
-//! Router::new()
-//!     .route("/premium", post(premium_handler).layer(from_fn(payment_middleware)))
-//! # }
-//! # async fn premium_handler() {}
-//! ```
-//!
-//! ### The Seller Toolkit
-//!
-//! The seller toolkit provides utilities for building custom payment handling logic outside of specific frameworks.
-//!
-//! You might be interested in this if you are using a different web framework or have custom requirements.
-//!
-//! See [`seller::toolkit`] for more details.
+//! - **[`v1`]**: X402 v1 protocol implementation. See the [v1 module documentation](v1) for seller guides, Axum integration, and facilitator client usage.
 //!
 //! ## Extend X402 Kit As You Like
 //!
@@ -266,10 +139,10 @@
 //! use alloy_primitives::address;
 //! use url_macro::url;
 //! use x402_kit::{
-//!     config::Resource,
+//!     core::Resource,
 //!     networks::evm::{ExplicitEvmAsset, ExplicitEvmNetwork, EvmNetwork, EvmAsset, EvmAddress, Eip712Domain},
 //!     schemes::exact_evm::ExactEvm,
-//!     transport::PaymentRequirements,
+//!     v1::transport::PaymentRequirements,
 //! };
 //!
 //! // Define your custom network and asset
@@ -311,16 +184,17 @@
 //!     .resource(resource)
 //!     .build();
 //!
-//! let requirements: PaymentRequirements = payment.into();
+//! // Use .v1() to convert to v1 PaymentRequirements
+//! let requirements: PaymentRequirements = payment.v1();
 //! # }
 //! ```
 //!
 //! ### Defining New Network Families
 //!
-//! If you want to define an entirely new family of networks (beyond EVM or SVM), you need to implement the core traits under [`concepts`]:
+//! If you want to define an entirely new family of networks (beyond EVM or SVM), you need to implement the core traits under [`core`]:
 //!
-//! - [`concepts::NetworkFamily`]: Represents a blockchain network family
-//! - [`concepts::Address`]: Represents an address on that network
+//! - [`core::NetworkFamily`]: Represents a blockchain network family
+//! - [`core::Address`]: Represents an address on that network
 //!
 //! The `Address` type should also implement `FromStr`, `Display`, `Copy`, `Debug`, `Clone`, `PartialEq`, `Eq`, and `Hash` for proper serialization/deserialization and usage throughout the SDK.
 //!
@@ -328,7 +202,7 @@
 //!
 //! ```
 //! use std::{fmt::Display, str::FromStr};
-//! use x402_kit::concepts::{Address, Asset, NetworkFamily};
+//! use x402_kit::core::{Address, Asset, NetworkFamily};
 //!
 //! // Define your network family
 //! struct MyNetworkFamily {
@@ -386,17 +260,17 @@
 //! # }
 //! ```
 //!
-//! Once you have these core types defined, you can build schemes and payment requirements for your custom network family by implementing the [`concepts::Scheme`] trait.
+//! Once you have these core types defined, you can build schemes and payment requirements for your custom network family by implementing the [`core::Scheme`] trait.
 //!
 //! ### Defining new Schemes
 //!
-//! To define a new payment scheme, implement the `Scheme` trait from the `concepts` module. This involves specifying the associated network and payload types.
+//! To define a new payment scheme, implement the `Scheme` trait from the `core` module. This involves specifying the associated network and payload types.
 //!
 //! Just take how `ExactSvmScheme` is defined for example:
 //!
 //! ```
 //! use serde::{Deserialize, Serialize};
-//! use x402_kit::concepts::Scheme;
+//! use x402_kit::core::Scheme;
 //! use x402_kit::networks::svm::SvmNetwork;
 //!
 //! pub struct ExactSvmScheme(pub SvmNetwork);
@@ -419,14 +293,14 @@
 //!
 //! Then you should make an entrypoint for sellers to convert the scheme into `PaymentRequirements`.
 //!
-//! Note that `PaymentRequirementsConfig` is a type-safe builder for constructing `PaymentRequirements` from schemes.
+//! Note that `Payment` is a type-safe builder for constructing payment configurations from schemes.
 //!
 //! ```
 //! use bon::Builder;
-//! use x402_kit::config::{PaymentRequirementsConfig, Resource, TransportConfig};
+//! use x402_kit::core::{Payment, Resource};
 //! use x402_kit::networks::svm::{ExplicitSvmAsset, ExplicitSvmNetwork, SvmAddress};
 //! use x402_kit::schemes::exact_svm::ExactSvmScheme;
-//! use x402_kit::transport::PaymentRequirements;
+//! use x402_kit::v1::transport::PaymentRequirements;
 //!
 //! #[derive(Builder, Debug, Clone)]
 //! pub struct ExactSvm<A: ExplicitSvmAsset> {
@@ -438,24 +312,15 @@
 //!     pub resource: Resource,
 //! }
 //! impl<A: ExplicitSvmAsset> ExactSvm<A> {
-//!     pub fn into_config(self) -> PaymentRequirementsConfig<ExactSvmScheme, SvmAddress> {
-//!         PaymentRequirementsConfig {
-//!             scheme: ExactSvmScheme(A::Network::NETWORK),
-//!             transport: TransportConfig::builder()
-//!                 .amount(self.amount)
-//!                 .asset(A::ASSET)
-//!                 .pay_to(self.pay_to)
-//!                 .max_timeout_seconds(self.max_timeout_seconds_override.unwrap_or(60))
-//!                 .resource(self.resource)
-//!                 .build(),
-//!             // Fee payer should be updated with facilitator's supported networks list
-//!             extra: None,
-//!         }
-//!     }
-//! }
-//! impl<A: ExplicitSvmAsset> From<ExactSvm<A>> for PaymentRequirements {
-//!     fn from(value: ExactSvm<A>) -> Self {
-//!         value.into_config().into()
+//!     pub fn into_payment(self) -> Payment<ExactSvmScheme, SvmAddress> {
+//!         Payment::builder()
+//!             .scheme(ExactSvmScheme(A::Network::NETWORK))
+//!             .amount(self.amount)
+//!             .asset(A::ASSET)
+//!             .pay_to(self.pay_to)
+//!             .max_timeout_seconds(self.max_timeout_seconds_override.unwrap_or(60))
+//!             .resource(self.resource)
+//!             .build()
 //!     }
 //! }
 //!
