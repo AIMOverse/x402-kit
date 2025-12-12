@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    types::{AnyJson, X402Version},
-    v1::transport::{Base64EncodedHeader, PaymentPayload, PaymentRequirements, PaymentResponse},
+    types::{AnyJson, Base64EncodedHeader, X402Version},
+    v1::transport::{PaymentPayload, PaymentRequirements, PaymentResponse},
 };
 
 #[derive(Debug, Clone)]

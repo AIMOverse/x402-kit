@@ -331,5 +331,6 @@ pub mod core;
 pub mod errors;
 pub mod networks;
 pub mod schemes;
+pub mod transport;
 pub mod types;
 pub mod v1;

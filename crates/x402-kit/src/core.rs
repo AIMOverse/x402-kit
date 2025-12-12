@@ -11,6 +11,9 @@ use crate::types::{AmountValue, AnyJson, OutputSchema};
 pub trait NetworkFamily {
     /// The name of the network in the family.
     fn network_name(&self) -> &str;
+
+    /// The Blockchain network identifier in CAIP-2 format (e.g., "eip155:84532")
+    fn network_id(&self) -> &str;
 }
 
 /// Network-specific address type.

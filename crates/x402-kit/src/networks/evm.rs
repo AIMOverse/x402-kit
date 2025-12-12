@@ -11,11 +11,15 @@ use crate::core::{Address, Asset, NetworkFamily};
 pub struct EvmNetwork {
     pub name: &'static str,
     pub chain_id: u64,
+    pub network_id: &'static str,
 }
 
 impl NetworkFamily for EvmNetwork {
     fn network_name(&self) -> &str {
         self.name
+    }
+    fn network_id(&self) -> &str {
+        self.network_id
     }
 }
 
@@ -176,6 +180,7 @@ pub mod networks {
         EvmNetwork {
             name: "ethereum",
             chain_id: 1,
+            network_id: "eip155:1",
         }
     );
     define_explicit_evm_network!(
@@ -183,6 +188,7 @@ pub mod networks {
         EvmNetwork {
             name: "ethereum-sepolia",
             chain_id: 11155111,
+            network_id: "eip155:11155111",
         }
     );
     define_explicit_evm_network!(
@@ -190,6 +196,7 @@ pub mod networks {
         EvmNetwork {
             name: "base",
             chain_id: 8453,
+            network_id: "eip155:8453",
         }
     );
     define_explicit_evm_network!(
@@ -197,6 +204,7 @@ pub mod networks {
         EvmNetwork {
             name: "base-sepolia",
             chain_id: 84532,
+            network_id: "eip155:84532",
         }
     );
 }

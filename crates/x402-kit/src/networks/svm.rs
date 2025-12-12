@@ -8,11 +8,18 @@ use solana_pubkey::{ParsePubkeyError, Pubkey};
 
 use crate::core::{Address, NetworkFamily};
 
-pub struct SvmNetwork(pub &'static str);
+pub struct SvmNetwork {
+    pub name: &'static str,
+    pub caip_2_id: &'static str,
+}
 
 impl NetworkFamily for SvmNetwork {
     fn network_name(&self) -> &str {
-        self.0
+        self.name
+    }
+
+    fn network_id(&self) -> &str {
+        self.caip_2_id
     }
 }
 
@@ -130,17 +137,26 @@ pub mod networks {
 
     pub struct Solana;
     impl ExplicitSvmNetwork for Solana {
-        const NETWORK: SvmNetwork = SvmNetwork("solana");
+        const NETWORK: SvmNetwork = SvmNetwork {
+            name: "solana",
+            caip_2_id: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+        };
     }
 
     pub struct SolanaDevnet;
     impl ExplicitSvmNetwork for SolanaDevnet {
-        const NETWORK: SvmNetwork = SvmNetwork("solana-devnet");
+        const NETWORK: SvmNetwork = SvmNetwork {
+            name: "solana-devnet",
+            caip_2_id: "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1",
+        };
     }
 
     pub struct SolanaTestnet;
     impl ExplicitSvmNetwork for SolanaTestnet {
-        const NETWORK: SvmNetwork = SvmNetwork("solana-testnet");
+        const NETWORK: SvmNetwork = SvmNetwork {
+            name: "solana-testnet",
+            caip_2_id: "solana:4uhcVJyU9pJkvQyS88uRDiswHXSCkY3z",
+        };
     }
 }
 

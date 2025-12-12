@@ -3,7 +3,7 @@ use std::fmt::Display;
 use http::{HeaderMap, StatusCode};
 
 use crate::{
-    types::X402Version,
+    types::{Base64EncodedHeader, X402Version},
     v1::facilitator::{
         Facilitator, FacilitatorPaymentRequest, FacilitatorPaymentRequestPayload,
         FacilitatorSettleFailed, FacilitatorSettleResponse, FacilitatorSettleSuccess,
@@ -11,8 +11,7 @@ use crate::{
         FacilitatorVerifyValid,
     },
     v1::transport::{
-        Base64EncodedHeader, PaymentPayload, PaymentRequirements, PaymentRequirementsResponse,
-        PaymentResponse,
+        PaymentPayload, PaymentRequirements, PaymentRequirementsResponse, PaymentResponse,
     },
 };
 

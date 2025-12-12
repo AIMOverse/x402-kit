@@ -1,12 +1,10 @@
-use std::fmt::Display;
-
 use base64::{Engine, prelude::BASE64_STANDARD};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::{
     core::{Address, NetworkFamily, Payment, Scheme},
-    types::{AmountValue, AnyJson, OutputSchema, X402Version},
+    types::{AmountValue, AnyJson, Base64EncodedHeader, OutputSchema, X402Version},
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -62,34 +60,6 @@ pub struct PaymentResponse {
     pub transaction: String,
     pub network: String,
     pub payer: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Base64EncodedHeader(pub String);
-
-impl Serialize for Base64EncodedHeader {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(&self.0)
-    }
-}
-
-impl<'de> Deserialize<'de> for Base64EncodedHeader {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        Ok(Base64EncodedHeader(s))
-    }
-}
-
-impl Display for Base64EncodedHeader {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
 }
 
 impl TryFrom<PaymentPayload> for Base64EncodedHeader {

@@ -5,13 +5,16 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
-use crate::v1::{
-    facilitator::{Facilitator, FacilitatorSettleSuccess, FacilitatorVerifyValid},
-    seller::toolkit::{
-        extract_payment_payload, select_payment_with_payload, settle_payment,
-        update_supported_kinds, verify_payment,
+use crate::{
+    types::Base64EncodedHeader,
+    v1::{
+        facilitator::{Facilitator, FacilitatorSettleSuccess, FacilitatorVerifyValid},
+        seller::toolkit::{
+            extract_payment_payload, select_payment_with_payload, settle_payment,
+            update_supported_kinds, verify_payment,
+        },
+        transport::{PaymentRequirements, PaymentResponse},
     },
-    transport::{Base64EncodedHeader, PaymentRequirements, PaymentResponse},
 };
 
 #[derive(Debug, Clone)]
