@@ -72,7 +72,7 @@ mod tests {
             .into();
 
         assert_eq!(pr.scheme, "exact");
-        assert_eq!(pr.network, "solana-devnet");
+        assert_eq!(pr.network, "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1");
         assert_eq!(pr.amount, 1000u64.into());
         assert!(pr.extra.is_none());
     }

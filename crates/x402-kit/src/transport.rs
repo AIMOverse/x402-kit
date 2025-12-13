@@ -93,7 +93,7 @@ impl Debug for Accepts {
 }
 
 impl Accepts {
-    pub fn add(mut self, payment: impl Into<PaymentRequirements>) -> Self {
+    pub fn push(mut self, payment: impl Into<PaymentRequirements>) -> Self {
         self.0.push(payment.into());
         self
     }
