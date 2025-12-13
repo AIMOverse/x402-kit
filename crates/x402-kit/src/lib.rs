@@ -10,6 +10,7 @@
 //! ### For the X402 Protocol
 //!
 //! - **[`core`]**: Core traits and types used across the X402 Kit, including resource configuration.
+//! - **[`transport`]**: Types and traits for defining X402 transport mechanisms and facilitator interactions.
 //! - **[`types`]**: Common re-usable types for defining the X402 protocol.
 //!
 //! ### For Network-Specific Implementations
@@ -17,9 +18,10 @@
 //! - **[`networks`]**: Network-specific implementations, e.g., EVM / SVM assets and addresses.
 //! - **[`schemes`]**: Payment scheme implementations, e.g., Exact EVM / Exact SVM, and their signer logic.
 //!
-//! ### Protocol Versions
+//! ### Facilitator Utilities
 //!
-//! - **[`v1`]**: X402 v1 protocol implementation. See the [v1 module documentation](v1) for seller guides, Axum integration, and facilitator client usage.
+//! - **[`facilitator`]**: Traits and types for building X402 facilitators.
+//! - **[`facilitator_client`]**: Utilities for building X402 facilitator clients.
 //!
 //! ## Extend X402 Kit As You Like
 //!
@@ -43,6 +45,7 @@
 //!     const NETWORK: EvmNetwork = EvmNetwork {
 //!         name: "my-custom-evm-network",
 //!         chain_id: 12345,
+//!         network_id: "eip155:12345",
 //!     };
 //! }
 //!
@@ -57,7 +60,10 @@
 //! struct MyCustomSvmNetwork;
 //!
 //! impl ExplicitSvmNetwork for MyCustomSvmNetwork {
-//!     const NETWORK: SvmNetwork = SvmNetwork("my-custom-svm-network");
+//!     const NETWORK: SvmNetwork = SvmNetwork {
+//!         name: "my-custom-svm-network",
+//!         caip_2_id: "solana:BASE58_GENESIS_HASH",
+//!     };
 //! }
 //!
 //! // Now you can use MyCustomSvmNetwork with any scheme that supports SVM
@@ -80,6 +86,7 @@
 //!     const NETWORK: EvmNetwork = EvmNetwork {
 //!         name: "my-network",
 //!         chain_id: 12345,
+//!         network_id: "eip155:12345",
 //!     };
 //! }
 //!
@@ -113,7 +120,10 @@
 //!
 //! struct MyCustomSvmNetwork;
 //! impl ExplicitSvmNetwork for MyCustomSvmNetwork {
-//!     const NETWORK: SvmNetwork = SvmNetwork("my-svm-network");
+//!     const NETWORK: SvmNetwork = SvmNetwork {
+//!         name: "my-svm-network",
+//!         caip_2_id: "solana:custom",
+//!     };
 //! }
 //!
 //! struct MyCustomSvmToken;
@@ -137,12 +147,10 @@
 //!
 //! ```no_run
 //! use alloy_primitives::address;
-//! use url_macro::url;
 //! use x402_kit::{
-//!     core::Resource,
 //!     networks::evm::{ExplicitEvmAsset, ExplicitEvmNetwork, EvmNetwork, EvmAsset, EvmAddress, Eip712Domain},
 //!     schemes::exact_evm::ExactEvm,
-//!     v1::transport::PaymentRequirements,
+//!     transport::PaymentRequirements,
 //! };
 //!
 //! // Define your custom network and asset
@@ -151,6 +159,7 @@
 //!     const NETWORK: EvmNetwork = EvmNetwork {
 //!         name: "polygon",
 //!         chain_id: 137,
+//!         network_id: "eip155:137",
 //!     };
 //! }
 //!
@@ -171,21 +180,14 @@
 //!
 //! # fn use_custom_asset() {
 //! // Use it in payment requirements
-//! let resource = Resource::builder()
-//!     .url(url!("https://example.com/api"))
-//!     .description("API access")
-//!     .mime_type("application/json")
-//!     .build();
-//!
 //! let payment = ExactEvm::builder()
 //!     .asset(UsdcPolygon)
 //!     .amount(1000000) // 1 USDC
 //!     .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
-//!     .resource(resource)
 //!     .build();
 //!
-//! // Use .v1() to convert to v1 PaymentRequirements
-//! let requirements: PaymentRequirements = payment.v1();
+//! // Convert to PaymentRequirements for use with facilitator
+//! let requirements: PaymentRequirements = payment.into();
 //! # }
 //! ```
 //!
@@ -207,12 +209,15 @@
 //! // Define your network family
 //! struct MyNetworkFamily {
 //!     network_name: &'static str,
-//!     network_id: u64,
+//!     network_id: &'static str,
 //! }
 //!
 //! impl NetworkFamily for MyNetworkFamily {
 //!     fn network_name(&self) -> &str {
 //!         self.network_name
+//!     }
+//!     fn network_id(&self) -> &str {
+//!         self.network_id
 //!     }
 //! }
 //!
@@ -245,7 +250,7 @@
 //! // Now you can use your custom network family
 //! let network = MyNetworkFamily {
 //!     network_name: "my-custom-network",
-//!     network_id: 42,
+//!     network_id: "mynet:42",
 //! };
 //!
 //! let address: MyAddress = "12345".parse().unwrap();
@@ -291,16 +296,16 @@
 //! }
 //! ```
 //!
-//! Then you should make an entrypoint for sellers to convert the scheme into `PaymentRequirements`.
+//! Then you should make an entrypoint to convert the scheme into `PaymentRequirements`.
 //!
 //! Note that `Payment` is a type-safe builder for constructing payment configurations from schemes.
 //!
 //! ```
 //! use bon::Builder;
-//! use x402_kit::core::{Payment, Resource};
+//! use x402_kit::core::Payment;
 //! use x402_kit::networks::svm::{ExplicitSvmAsset, ExplicitSvmNetwork, SvmAddress};
 //! use x402_kit::schemes::exact_svm::ExactSvmScheme;
-//! use x402_kit::v1::transport::PaymentRequirements;
+//! use x402_kit::transport::PaymentRequirements;
 //!
 //! #[derive(Builder, Debug, Clone)]
 //! pub struct ExactSvm<A: ExplicitSvmAsset> {
@@ -309,7 +314,6 @@
 //!     pub pay_to: SvmAddress,
 //!     pub amount: u64,
 //!     pub max_timeout_seconds_override: Option<u64>,
-//!     pub resource: Resource,
 //! }
 //! impl<A: ExplicitSvmAsset> ExactSvm<A> {
 //!     pub fn into_payment(self) -> Payment<ExactSvmScheme, SvmAddress> {
@@ -319,7 +323,6 @@
 //!             .asset(A::ASSET)
 //!             .pay_to(self.pay_to)
 //!             .max_timeout_seconds(self.max_timeout_seconds_override.unwrap_or(60))
-//!             .resource(self.resource)
 //!             .build()
 //!     }
 //! }
