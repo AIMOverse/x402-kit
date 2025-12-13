@@ -9,7 +9,7 @@ use crate::{
     types::{AmountValue, AnyJson, Base64EncodedHeader, Extension, Record, X402V2},
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct PaymentRequirements {
     pub scheme: String,
@@ -48,6 +48,22 @@ impl IntoIterator for Accepts {
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a Accepts {
+    type Item = &'a PaymentRequirements;
+    type IntoIter = std::slice::Iter<'a, PaymentRequirements>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
+impl FromIterator<PaymentRequirements> for Accepts {
+    fn from_iter<T: IntoIterator<Item = PaymentRequirements>>(iter: T) -> Self {
+        let vec: Vec<PaymentRequirements> = iter.into_iter().collect();
+        Accepts(vec)
     }
 }
 

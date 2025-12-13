@@ -13,34 +13,34 @@ pub struct PaymentRequest {
 }
 
 #[derive(Debug, Clone)]
-pub enum VerifyResponse {
+pub enum VerifyResult {
     Valid(VerifyValid),
     Invalid(VerifyInvalid),
 }
 
-impl VerifyResponse {
+impl VerifyResult {
     pub fn is_valid(&self) -> bool {
-        matches!(self, VerifyResponse::Valid(_))
+        matches!(self, VerifyResult::Valid(_))
     }
 
     pub fn valid(valid: VerifyValid) -> Self {
-        VerifyResponse::Valid(valid)
+        VerifyResult::Valid(valid)
     }
 
     pub fn invalid(invalid: VerifyInvalid) -> Self {
-        VerifyResponse::Invalid(invalid)
+        VerifyResult::Invalid(invalid)
     }
 
     pub fn as_valid(&self) -> Option<&VerifyValid> {
         match self {
-            VerifyResponse::Valid(v) => Some(v),
+            VerifyResult::Valid(v) => Some(v),
             _ => None,
         }
     }
 
     pub fn as_invalid(&self) -> Option<&VerifyInvalid> {
         match self {
-            VerifyResponse::Invalid(v) => Some(v),
+            VerifyResult::Invalid(v) => Some(v),
             _ => None,
         }
     }
@@ -58,34 +58,34 @@ pub struct VerifyInvalid {
 }
 
 #[derive(Debug, Clone)]
-pub enum SettleResponse {
+pub enum SettleResult {
     Success(SettleSuccess),
     Failed(SettleFailed),
 }
 
-impl SettleResponse {
+impl SettleResult {
     pub fn is_success(&self) -> bool {
-        matches!(self, SettleResponse::Success(_))
+        matches!(self, SettleResult::Success(_))
     }
 
     pub fn success(success: SettleSuccess) -> Self {
-        SettleResponse::Success(success)
+        SettleResult::Success(success)
     }
 
     pub fn failed(failed: SettleFailed) -> Self {
-        SettleResponse::Failed(failed)
+        SettleResult::Failed(failed)
     }
 
     pub fn as_success(&self) -> Option<&SettleSuccess> {
         match self {
-            SettleResponse::Success(v) => Some(v),
+            SettleResult::Success(v) => Some(v),
             _ => None,
         }
     }
 
     pub fn as_failed(&self) -> Option<&SettleFailed> {
         match self {
-            SettleResponse::Failed(v) => Some(v),
+            SettleResult::Failed(v) => Some(v),
             _ => None,
         }
     }
@@ -145,10 +145,10 @@ pub trait Facilitator {
     fn verify(
         &self,
         request: PaymentRequest,
-    ) -> impl Future<Output = Result<VerifyResponse, Self::Error>>;
+    ) -> impl Future<Output = Result<VerifyResult, Self::Error>>;
 
     fn settle(
         &self,
         request: PaymentRequest,
-    ) -> impl Future<Output = Result<SettleResponse, Self::Error>>;
+    ) -> impl Future<Output = Result<SettleResult, Self::Error>>;
 }

@@ -4,8 +4,8 @@ use url::Url;
 
 use crate::{
     facilitator::{
-        Facilitator, PaymentRequest, SettleFailed, SettleResponse, SettleSuccess,
-        SupportedResponse, VerifyInvalid, VerifyResponse, VerifyValid,
+        Facilitator, PaymentRequest, SettleFailed, SettleResult, SettleSuccess, SupportedResponse,
+        VerifyInvalid, VerifyResult, VerifyValid,
     },
     transport::{PaymentPayload, PaymentRequirements},
 };
@@ -37,11 +37,11 @@ where
 }
 
 pub trait IntoVerifyResponse {
-    fn into_verify_response(self) -> VerifyResponse;
+    fn into_verify_response(self) -> VerifyResult;
 }
 
 pub trait IntoSettleResponse {
-    fn into_settle_response(self) -> SettleResponse;
+    fn into_settle_response(self) -> SettleResult;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -81,13 +81,13 @@ impl From<PaymentRequest> for DefaultPaymentRequest {
 }
 
 impl IntoVerifyResponse for DefaultVerifyResponse {
-    fn into_verify_response(self) -> VerifyResponse {
+    fn into_verify_response(self) -> VerifyResult {
         if self.is_valid {
-            VerifyResponse::valid(VerifyValid {
+            VerifyResult::valid(VerifyValid {
                 payer: self.payer.unwrap_or_default(),
             })
         } else {
-            VerifyResponse::invalid(VerifyInvalid {
+            VerifyResult::invalid(VerifyInvalid {
                 invalid_reason: self.invalid_reason.unwrap_or_default(),
                 payer: self.payer,
             })
@@ -96,15 +96,15 @@ impl IntoVerifyResponse for DefaultVerifyResponse {
 }
 
 impl IntoSettleResponse for DefaultSettleResponse {
-    fn into_settle_response(self) -> SettleResponse {
+    fn into_settle_response(self) -> SettleResult {
         if self.success {
-            SettleResponse::success(SettleSuccess {
+            SettleResult::success(SettleSuccess {
                 payer: self.payer.unwrap_or_default(),
                 transaction: self.transaction.unwrap_or_default(),
                 network: self.network.unwrap_or_default(),
             })
         } else {
-            SettleResponse::failed(SettleFailed {
+            SettleResult::failed(SettleFailed {
                 error_reason: self.error_reason.unwrap_or_default(),
                 payer: self.payer,
             })
@@ -270,7 +270,7 @@ where
         Ok(supported)
     }
 
-    async fn verify(&self, request: PaymentRequest) -> Result<VerifyResponse, Self::Error> {
+    async fn verify(&self, request: PaymentRequest) -> Result<VerifyResult, Self::Error> {
         let result = self
             .client
             .post(self.base_url.join("verify")?)
@@ -284,7 +284,7 @@ where
         Ok(result.into_verify_response())
     }
 
-    async fn settle(&self, request: PaymentRequest) -> Result<SettleResponse, Self::Error> {
+    async fn settle(&self, request: PaymentRequest) -> Result<SettleResult, Self::Error> {
         let result = self
             .client
             .post(self.base_url.join("settle")?)
