@@ -4521,15 +4521,38 @@ dependencies = [
  "solana-signature",
  "thiserror",
  "tokio",
- "tracing",
  "tracing-subscriber",
  "url",
  "url-macro",
 ]
 
 [[package]]
+name = "x402-kit"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e0fd828199595bb09c1a1d5d2bdd4960dc42de2fd4cfc92f86c71a135238d2f"
+dependencies = [
+ "alloy-primitives",
+ "base64",
+ "bon",
+ "hex",
+ "serde",
+ "serde_json",
+ "solana-pubkey",
+ "solana-signature",
+ "thiserror",
+ "url",
+]
+
+[[package]]
 name = "x402-paywall"
-version = "0.1.0"
+version = "2.0.0"
+dependencies = [
+ "bon",
+ "http",
+ "tracing",
+ "x402-kit 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "yoke"

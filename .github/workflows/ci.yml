@@ -18,7 +18,6 @@ jobs:
         features:
           - "" # no extra features
           - "facilitator-client"
-          - "tracing"
           - "evm-signer"
           - "svm-signer"
           - "all" # marker for all features
@@ -37,6 +36,32 @@ jobs:
           else
             cargo build -p x402-kit --release --no-default-features --features "${{ matrix.features }}"
           fi
+
+  build-x402-paywall:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # adjust to your feature list
+        features:
+          - "" # no extra features
+          - "tracing"
+          - "all" # marker for all features
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Build with features = ${{ matrix.features }}
+        run: |
+          if [ "${{ matrix.features }}" = "all" ]; then
+            cargo build -p x402-paywall --release --all-features
+          elif [ "${{ matrix.features }}" = "" ]; then
+            cargo build -p x402-paywall --release --no-default-features
+          else
+            cargo build -p x402-paywall --release --no-default-features --features "${{ matrix.features }}"
+          fi
+
   fmt:
     runs-on: ubuntu-latest
     steps:

@@ -8,9 +8,8 @@ license = "MIT"
 description = "A fully modular SDK for building complex X402 payment integrations."
 
 [features]
-default = ["facilitator-client", "tracing", "evm-signer", "svm-signer"]
+default = ["facilitator-client", "evm-signer", "svm-signer"]
 facilitator-client = ["dep:reqwest", "dep:http"]
-tracing = ["dep:tracing"]
 evm-signer = ["dep:alloy-core", "dep:alloy-signer", "dep:rand"]
 svm-signer = ["dep:bincode"]
 
@@ -26,9 +25,6 @@ url = { version = "2.5" }
 solana-pubkey = { version = "4.0" }
 solana-signature = { version = "3.1" }
 base64 = { version = "0.22" }
-
-# === Feature "tracing" ===
-tracing = { version = "0.1", optional = true }
 
 # === Feature "facilitator-client" ===
 reqwest = { version = "0.12", optional = true, features = ["json"] }

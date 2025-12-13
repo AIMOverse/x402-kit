@@ -1,6 +1,18 @@
 [package]
 name = "x402-paywall"
-version = "0.1.0"
+version = "2.0.0"
 edition = "2024"
+repository = "https://github.com/AIMOverse/x402-kit"
+authors = ["Archer <archer@aimo.network>"]
+license = "MIT"
+description = "A fully modular SDK for building complex X402 payment integrations."
+
+[features]
+default = ["tracing"]
+tracing = ["dep:tracing"]
 
 [dependencies]
+x402-kit = { version = "2.0", default-features = false }
+http = { version = "1.4" }
+bon = { version = "3.8" }
+tracing = { version = "0.1", optional = true }

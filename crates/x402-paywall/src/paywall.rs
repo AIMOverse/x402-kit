@@ -2,8 +2,7 @@ use std::fmt::Display;
 
 use bon::Builder;
 use http::{HeaderValue, Request, Response, StatusCode};
-
-use crate::{
+use x402_kit::{
     core::Resource,
     facilitator::{
         Facilitator, PaymentRequest, SettleResult, SettleSuccess, SupportedResponse, VerifyResult,
