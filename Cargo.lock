@@ -4501,7 +4501,7 @@ dependencies = [
 
 [[package]]
 name = "x402-kit"
-version = "0.3.2"
+version = "1.0.0"
 dependencies = [
  "alloy",
  "alloy-core",
@@ -4511,10 +4511,8 @@ dependencies = [
  "base64",
  "bincode",
  "bon",
- "bytes",
  "hex",
  "http",
- "http-body-util",
  "rand 0.9.2",
  "reqwest",
  "serde",
@@ -4523,12 +4521,15 @@ dependencies = [
  "solana-signature",
  "thiserror",
  "tokio",
- "tower",
  "tracing",
  "tracing-subscriber",
  "url",
  "url-macro",
 ]
+
+[[package]]
+name = "x402-paywall"
+version = "0.1.0"
 
 [[package]]
 name = "yoke"

@@ -2,8 +2,9 @@ use bon::Builder;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    core::{Payment, Resource, Scheme},
+    core::{Payment, Scheme},
     networks::evm::{EvmAddress, EvmNetwork, EvmSignature, ExplicitEvmAsset, ExplicitEvmNetwork},
+    transport::PaymentRequirements,
     types::{AmountValue, AnyJson},
 };
 
@@ -138,10 +139,7 @@ pub struct ExactEvm<A: ExplicitEvmAsset> {
     pub extra_override: Option<AnyJson>,
 }
 
-impl<A> From<ExactEvm<A>> for Payment<ExactEvmScheme, EvmAddress>
-where
-    A: ExplicitEvmAsset,
-{
+impl<A: ExplicitEvmAsset> From<ExactEvm<A>> for Payment<ExactEvmScheme, EvmAddress> {
     fn from(scheme: ExactEvm<A>) -> Self {
         Payment {
             scheme: ExactEvmScheme(A::Network::NETWORK),
@@ -156,10 +154,9 @@ where
     }
 }
 
-impl<A: ExplicitEvmAsset> ExactEvm<A> {
-    #[cfg(feature = "v1")]
-    pub fn v1_with_resource(self, resource: Resource) -> crate::v1::transport::PaymentRequirements {
-        crate::v1::transport::PaymentRequirements::from((Payment::from(self), resource))
+impl<A: ExplicitEvmAsset> From<ExactEvm<A>> for PaymentRequirements {
+    fn from(scheme: ExactEvm<A>) -> Self {
+        PaymentRequirements::from(Payment::from(scheme))
     }
 }
 
@@ -167,7 +164,6 @@ impl<A: ExplicitEvmAsset> ExactEvm<A> {
 mod tests {
     use alloy_primitives::address;
     use serde_json::json;
-    use url::Url;
 
     use crate::networks::evm::assets::UsdcBaseSepolia;
 
@@ -175,39 +171,29 @@ mod tests {
 
     #[test]
     fn test_build_payment_requirements() {
-        let resource = Resource::builder()
-            .url(Url::parse("https://example.com/payment").unwrap())
-            .description("Payment for services".to_string())
-            .mime_type("application/json".to_string())
-            .build();
         let scheme = ExactEvm::builder()
             .asset(UsdcBaseSepolia)
             .amount(1000)
             .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
             .build();
-        let payment_requirements = scheme.v1_with_resource(resource);
+        let payment_requirements: PaymentRequirements = scheme.into();
 
         assert_eq!(payment_requirements.scheme, "exact");
         assert_eq!(
             payment_requirements.asset,
             UsdcBaseSepolia::ASSET.address.to_string()
         );
-        assert_eq!(payment_requirements.max_amount_required, 1000u64.into());
+        assert_eq!(payment_requirements.amount, 1000u64.into());
     }
 
     #[test]
     fn test_extra_override() {
-        let resource = Resource::builder()
-            .url(Url::parse("https://example.com/payment").unwrap())
-            .description("Payment for services".to_string())
-            .mime_type("application/json".to_string())
-            .build();
-        let pr = ExactEvm::builder()
+        let pr: PaymentRequirements = ExactEvm::builder()
             .asset(UsdcBaseSepolia)
             .amount(1000)
             .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
             .build()
-            .v1_with_resource(resource.clone());
+            .into();
 
         assert!(pr.extra.is_some());
         assert_eq!(
@@ -215,13 +201,13 @@ mod tests {
             serde_json::to_value(UsdcBaseSepolia::EIP712_DOMAIN).ok()
         );
 
-        let pr = ExactEvm::builder()
+        let pr: PaymentRequirements = ExactEvm::builder()
             .asset(UsdcBaseSepolia)
             .amount(1000)
             .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
             .extra_override(json!({"foo": "bar"}))
             .build()
-            .v1_with_resource(resource.clone());
+            .into();
 
         assert_eq!(pr.extra, Some(json!({"foo": "bar"})));
     }

@@ -2,8 +2,9 @@ use bon::Builder;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    core::{Payment, Resource, Scheme},
+    core::{Payment, Scheme},
     networks::svm::{ExplicitSvmAsset, ExplicitSvmNetwork, SvmAddress, SvmNetwork},
+    transport::PaymentRequirements,
 };
 
 #[derive(Builder, Debug, Clone)]
@@ -28,10 +29,9 @@ impl<A: ExplicitSvmAsset> From<ExactSvm<A>> for Payment<ExactSvmScheme, SvmAddre
     }
 }
 
-impl<A: ExplicitSvmAsset> ExactSvm<A> {
-    #[cfg(feature = "v1")]
-    pub fn v1_with_resource(self, resource: Resource) -> crate::v1::transport::PaymentRequirements {
-        crate::v1::transport::PaymentRequirements::from((Payment::from(self), resource))
+impl<A: ExplicitSvmAsset> From<ExactSvm<A>> for PaymentRequirements {
+    fn from(scheme: ExactSvm<A>) -> Self {
+        PaymentRequirements::from(Payment::from(scheme))
     }
 }
 
@@ -56,33 +56,24 @@ pub struct ExplicitSvmPayload {
 #[cfg(test)]
 mod tests {
     use solana_pubkey::pubkey;
-    use url::Url;
 
     use crate::{
-        core::Resource, networks::svm::assets::UsdcSolanaDevnet, schemes::exact_svm::ExactSvm,
+        networks::svm::assets::UsdcSolanaDevnet, schemes::exact_svm::ExactSvm,
+        transport::PaymentRequirements,
     };
 
     #[test]
     fn test_build_payment_requirements() {
-        let resource = Resource::builder()
-            .url(Url::parse("https://example.com/payment").unwrap())
-            .description("Payment for services".to_string())
-            .mime_type("application/json".to_string())
-            .build();
-        let pr: crate::v1::transport::PaymentRequirements = ExactSvm::builder()
+        let pr: PaymentRequirements = ExactSvm::builder()
             .asset(UsdcSolanaDevnet)
             .amount(1000)
             .pay_to(pubkey!("Ge3jkza5KRfXvaq3GELNLh6V1pjjdEKNpEdGXJgjjKUR"))
             .build()
-            .v1_with_resource(resource);
+            .into();
 
         assert_eq!(pr.scheme, "exact");
         assert_eq!(pr.network, "solana-devnet");
-        assert_eq!(pr.max_amount_required, 1000u64.into());
-        assert_eq!(
-            pr.resource,
-            Url::parse("https://example.com/payment").unwrap()
-        );
+        assert_eq!(pr.amount, 1000u64.into());
         assert!(pr.extra.is_none());
     }
 }
