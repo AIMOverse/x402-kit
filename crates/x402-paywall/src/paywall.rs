@@ -1,7 +1,9 @@
 use std::fmt::Display;
 
 use bon::Builder;
-use http::{HeaderValue, Request, Response, StatusCode};
+use bytes::Bytes;
+use http::{HeaderName, HeaderValue, Request, Response, StatusCode};
+use http_body_util::Full;
 use x402_kit::{
     core::Resource,
     facilitator::{
@@ -12,17 +14,30 @@ use x402_kit::{
     types::{Base64EncodedHeader, Extension, Record, X402V2},
 };
 
+/// A http paywall that uses a facilitator to verify and settle payments.
 #[derive(Builder, Debug, Clone)]
 pub struct PayWall<F: Facilitator> {
+    /// The facilitator to use for payment verification and settlement.
     pub facilitator: F,
+    /// Paywall behavior configuration.
     #[builder(default)]
     pub config: PayWallConfig,
+    /// The resource this paywall serves.
     pub resource: Resource,
+    /// The accepted payment requirements.
     pub accepts: Accepts,
+    /// Additional extensions to use.
     #[builder(default)]
     pub extensions: Record<Extension>,
 }
 
+/// Paywall configuration options.
+///
+/// The default behavior is to:
+/// - Update accepted payment kinds from the facilitator
+/// - Verify payments with the facilitator
+/// - Settle payments before proceeding to the handler
+/// - Not skip settlement on any response status codes
 #[derive(Builder, Debug, Clone, Default)]
 pub struct PayWallConfig {
     /// Skip updating supported payment kinds from the facilitator
@@ -42,11 +57,17 @@ pub struct PayWallConfig {
     pub skip_settle_on_status: Vec<StatusCode>,
 }
 
+/// The state of a payment processed by the paywall when accessing the resource handler.
 #[derive(Debug, Clone)]
-pub struct PaymentStatus {
+pub struct PaymentState {
+    /// Verification result, if verification was performed.
     pub verified: Option<VerifyValid>,
+    /// Settlement result, if settlement was performed.
     pub settled: Option<SettleSuccess>,
+    /// All extensions info provided by the paywall.
     pub extensions: Record<Extension>,
+    /// All extensions info provided by the signer.
+    pub signer_extensions: Record<Extension>,
 }
 
 #[derive(Debug, Clone)]
@@ -60,6 +81,58 @@ pub struct PayWallErrorResponse {
 pub enum PayWallErrorHeader {
     PaymentRequired(Base64EncodedHeader),
     PaymentResponse(Base64EncodedHeader),
+}
+
+impl PayWallErrorHeader {
+    pub fn header_name(&self) -> HeaderName {
+        match self {
+            PayWallErrorHeader::PaymentRequired(_) => HeaderName::from_static("PAYMENT-REQUIRED"),
+            PayWallErrorHeader::PaymentResponse(_) => HeaderName::from_static("PAYMENT-RESPONSE"),
+        }
+    }
+
+    pub fn header_value(self) -> Option<(HeaderName, HeaderValue)> {
+        match self {
+            PayWallErrorHeader::PaymentRequired(Base64EncodedHeader(s)) => {
+                HeaderValue::from_str(&s)
+                    .ok()
+                    .map(|v| (HeaderName::from_static("PAYMENT-REQUIRED"), v))
+            }
+            PayWallErrorHeader::PaymentResponse(Base64EncodedHeader(s)) => {
+                HeaderValue::from_str(&s)
+                    .ok()
+                    .map(|v| (HeaderName::from_static("PAYMENT-RESPONSE"), v))
+            }
+        }
+    }
+}
+impl From<PayWallErrorResponse> for Response<Full<Bytes>> {
+    fn from(value: PayWallErrorResponse) -> Self {
+        let body = match serde_json::to_vec(&value.body) {
+            Ok(b) => b,
+            Err(err) => {
+                #[cfg(feature = "tracing")]
+                tracing::error!(
+                    "Failed to serialize PayWallErrorResponse body to JSON bytes: {err}"
+                );
+
+                let mut response = Response::new(Full::new(Bytes::from_static(
+                    b"Failed to serialize PayWallErrorResponse body to JSON bytes",
+                )));
+                *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+
+                return response;
+            }
+        };
+
+        // Build the response
+        let mut response = Response::new(Full::new(Bytes::from_iter(body)));
+        *response.status_mut() = value.status;
+        if let Some((name, val)) = value.header.header_value() {
+            response.headers_mut().insert(name, val);
+        }
+        response
+    }
 }
 
 impl<F: Facilitator> PayWall<F> {
@@ -129,6 +202,10 @@ impl<F: Facilitator> PayWall<F> {
             None
         };
 
+        // Take ownership of signer extensions from payload
+        let signer_extensions = payment_payload.extensions.clone();
+
+        // Handling different settlement strategies
         let (mut response, settled) = if self.config.settle_before_access {
             // Settle payment with facilitator
             let settlement = self
@@ -156,25 +233,27 @@ impl<F: Facilitator> PayWall<F> {
                 settled.network
             );
 
-            let payment_status = PaymentStatus {
+            let payment_status = PaymentState {
                 verified: valid,
                 settled: Some(settled.clone()),
                 extensions: self.extensions.to_owned(),
+                signer_extensions,
             };
 
-            request.extensions_mut().insert(payment_status.clone());
+            request.extensions_mut().insert(payment_status);
 
             let response = handler(request).await;
             (response, settled)
         } else {
             // Proceed first, then settle
-            let payment_status = PaymentStatus {
+            let payment_status = PaymentState {
                 verified: valid,
                 settled: None,
                 extensions: self.extensions.to_owned(),
+                signer_extensions,
             };
 
-            request.extensions_mut().insert(payment_status.clone());
+            request.extensions_mut().insert(payment_status);
 
             let response = handler(request).await;
 

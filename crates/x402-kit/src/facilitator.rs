@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     transport::{PaymentPayload, PaymentRequirements, SettlementResponse},
-    types::{AnyJson, Base64EncodedHeader, Record, X402V2},
+    types::{AnyJson, Base64EncodedHeader, Extension, Record, X402V2},
 };
 
 #[derive(Debug, Clone)]
@@ -120,7 +120,7 @@ pub struct SupportedResponse {
 
     // TODO: implement stronger typings for extensions
     /// Array of extension identifiers the facilitator has implemented
-    pub extensions: Vec<AnyJson>,
+    pub extensions: Record<Extension>,
     /// Map of CAIP-2 patterns (e.g., eip155:*) to public signer addresses
     pub signers: Record<Vec<String>>,
 }

@@ -12,7 +12,10 @@ default = ["tracing"]
 tracing = ["dep:tracing"]
 
 [dependencies]
-x402-kit = { version = "2.0", default-features = false }
+x402-kit = { version = "2.0", path = "../x402-kit", default-features = false }
 http = { version = "1.4" }
 bon = { version = "3.8" }
 tracing = { version = "0.1", optional = true }
+http-body-util = { version = "0.1" }
+bytes = { version = "1.11" }
+serde_json = { version = "1.0" }

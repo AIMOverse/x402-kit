@@ -4527,31 +4527,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "x402-kit"
-version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e0fd828199595bb09c1a1d5d2bdd4960dc42de2fd4cfc92f86c71a135238d2f"
-dependencies = [
- "alloy-primitives",
- "base64",
- "bon",
- "hex",
- "serde",
- "serde_json",
- "solana-pubkey",
- "solana-signature",
- "thiserror",
- "url",
-]
-
-[[package]]
 name = "x402-paywall"
 version = "2.0.0"
 dependencies = [
  "bon",
+ "bytes",
  "http",
+ "http-body-util",
+ "serde_json",
  "tracing",
- "x402-kit 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "x402-kit",
 ]
 
 [[package]]

@@ -9,7 +9,7 @@ use crate::types::{AmountValue, AnyJson, Extension, OutputSchema, Record};
 
 /// A series of network families, e.g. EVM, SVM, etc.
 pub trait NetworkFamily {
-    /// The name of the network in the family.
+    /// The name of the network in the family, should be compatible with X402 V1.
     fn network_name(&self) -> &str;
 
     /// The Blockchain network identifier in CAIP-2 format (e.g., "eip155:84532")
@@ -32,30 +32,6 @@ pub trait Scheme {
     const SCHEME_NAME: &'static str;
     /// Get the concrete network for this scheme.
     fn network(&self) -> &Self::Network;
-
-    // fn select<A: Address<Network = Self::Network>>(
-    //     &self,
-    //     pr: &PaymentRequirements,
-    // ) -> Option<PaymentSelection<A>>
-    // where
-    //     Self: Sized,
-    // {
-    //     if pr.scheme == Self::SCHEME_NAME && pr.network == self.network().network_name() {
-    //         Some(PaymentSelection {
-    //             max_amount_required: pr.max_amount_required,
-    //             resource: pr.resource.clone(),
-    //             description: pr.description.clone(),
-    //             mime_type: pr.mime_type.clone(),
-    //             pay_to: pr.pay_to.parse().ok()?,
-    //             max_timeout_seconds: pr.max_timeout_seconds,
-    //             asset: pr.asset.parse().ok()?,
-    //             output_schema: pr.output_schema.clone(),
-    //             extra: pr.extra.clone(),
-    //         })
-    //     } else {
-    //         None
-    //     }
-    // }
 }
 
 /// Represents an asset on a given address.
@@ -91,7 +67,9 @@ where
     pub extra: Option<AnyJson>,
 }
 
-/// Payment configuration for a given scheme and transport.
+/// The selected payment for the signer to sign.
+///
+/// Selected payment only knows about the asset's address, not full asset details.
 #[derive(Builder)]
 pub struct PaymentSelection<A: Address> {
     /// The address to use for payments.

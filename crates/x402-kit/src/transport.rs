@@ -143,7 +143,7 @@ pub struct PaymentPayload {
     pub resource: PaymentResource,
     pub accepted: PaymentRequirements,
     pub payload: AnyJson,
-    pub extensions: AnyJson,
+    pub extensions: Record<Extension>,
 }
 
 impl TryFrom<PaymentPayload> for Base64EncodedHeader {
