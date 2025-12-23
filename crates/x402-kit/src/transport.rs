@@ -1,199 +1,176 @@
-use std::fmt::Display;
+use std::fmt::Debug;
 
 use base64::{Engine, prelude::BASE64_STANDARD};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::types::{AmountValue, AnyJson, OutputSchema, X402Version};
+use crate::{
+    core::{Address, NetworkFamily, Payment, Resource, Scheme},
+    types::{AmountValue, AnyJson, Base64EncodedHeader, Extension, Record, X402V2},
+};
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentRequirements {
+    pub scheme: String,
+    pub network: String,
+    pub amount: AmountValue,
+    pub asset: String,
+    pub pay_to: String,
+    pub max_timeout_seconds: u64,
+    pub extra: Option<AnyJson>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct PaymentRequirements {
-    /// Scheme name, defined in "schemes" protocol
-    pub scheme: String,
-    /// Network name, defined in "schemes" protocol
-    pub network: String,
-    /// Maximum amount required for the payment in smallest units
-    pub max_amount_required: AmountValue,
-    /// Resource URL to fetch payment details
-    pub resource: Url,
-    /// Description of the resource
+pub struct PaymentResource {
+    pub url: Url,
     pub description: String,
-    /// MIME type of the payment payload
     pub mime_type: String,
-    /// Destination address or account to pay to
-    pub pay_to: String,
-    /// Maximum timeout in seconds for the payment to be completed
-    pub max_timeout_seconds: u64,
-    /// Asset address or identifier
-    pub asset: String,
-    /// Schema of the input / output payload
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub output_schema: Option<OutputSchema>,
-    /// Extra fields for extensibility
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub extra: Option<AnyJson>,
+}
+
+impl From<Resource> for PaymentResource {
+    fn from(resource: Resource) -> Self {
+        PaymentResource {
+            url: resource.url,
+            description: resource.description,
+            mime_type: resource.mime_type,
+        }
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct Accepts(Vec<PaymentRequirements>);
+
+impl AsRef<[PaymentRequirements]> for Accepts {
+    fn as_ref(&self) -> &[PaymentRequirements] {
+        &self.0
+    }
+}
+
+impl<T> From<T> for Accepts
+where
+    T: Into<PaymentRequirements>,
+{
+    fn from(value: T) -> Self {
+        Accepts(vec![value.into()])
+    }
+}
+
+impl From<Vec<PaymentRequirements>> for Accepts {
+    fn from(value: Vec<PaymentRequirements>) -> Self {
+        Accepts(value)
+    }
+}
+
+impl IntoIterator for Accepts {
+    type Item = PaymentRequirements;
+    type IntoIter = std::vec::IntoIter<PaymentRequirements>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a Accepts {
+    type Item = &'a PaymentRequirements;
+    type IntoIter = std::slice::Iter<'a, PaymentRequirements>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
+impl FromIterator<PaymentRequirements> for Accepts {
+    fn from_iter<T: IntoIterator<Item = PaymentRequirements>>(iter: T) -> Self {
+        let vec: Vec<PaymentRequirements> = iter.into_iter().collect();
+        Accepts(vec)
+    }
+}
+
+impl Serialize for Accepts {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Accepts {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let vec = Vec::<PaymentRequirements>::deserialize(deserializer)?;
+        Ok(Accepts(vec))
+    }
+}
+
+impl Debug for Accepts {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        format!("{:?}", self.0).fmt(f)
+    }
+}
+
+impl Accepts {
+    pub fn push(mut self, payment: impl Into<PaymentRequirements>) -> Self {
+        self.0.push(payment.into());
+        self
+    }
+
+    pub fn new() -> Self {
+        Accepts(Vec::new())
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentRequired {
+    pub x402_version: X402V2,
+    pub error: String,
+    pub resource: PaymentResource,
+    pub accepts: Accepts,
+    pub extensions: Record<Extension>,
+}
+
+impl TryFrom<PaymentRequired> for Base64EncodedHeader {
+    type Error = crate::errors::Error;
+
+    /// Serialize PaymentRequired into `PAYMENT-REQUIRED` header format
+    fn try_from(value: PaymentRequired) -> Result<Self, Self::Error> {
+        let json = serde_json::to_string(&value)?;
+        let encoded = BASE64_STANDARD.encode(json);
+        Ok(Base64EncodedHeader(encoded))
+    }
+}
+
+impl TryFrom<Base64EncodedHeader> for PaymentRequired {
+    type Error = crate::errors::Error;
+
+    /// Deserialize `PAYMENT-REQUIRED` header into PaymentRequired
+    fn try_from(value: Base64EncodedHeader) -> Result<Self, Self::Error> {
+        let decoded = BASE64_STANDARD.decode(&value.0)?;
+        let json_str = String::from_utf8(decoded)?;
+        let payment_required: PaymentRequired = serde_json::from_str(&json_str)?;
+        Ok(payment_required)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaymentPayload {
-    pub x402_version: X402Version,
-    pub scheme: String,
-    pub network: String,
+    pub x402_version: X402V2,
+    pub resource: PaymentResource,
+    pub accepted: PaymentRequirements,
     pub payload: AnyJson,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PaymentRequirementsResponse {
-    pub x402_version: X402Version,
-    pub error: String,
-    pub accepts: Vec<PaymentRequirements>,
-}
-
-#[derive(Debug, Clone)]
-pub struct FacilitatorPaymentRequest {
-    pub payload: FacilitatorPaymentRequestPayload,
-    pub x_payment_header: Base64EncodedHeader,
-}
-
-#[derive(Debug, Clone)]
-pub struct FacilitatorPaymentRequestPayload {
-    pub payment_payload: PaymentPayload,
-    pub payment_requirements: PaymentRequirements,
-}
-
-#[derive(Debug, Clone)]
-pub enum FacilitatorVerifyResponse {
-    Valid(FacilitatorVerifyValid),
-    Invalid(FacilitatorVerifyInvalid),
-}
-
-impl FacilitatorVerifyResponse {
-    pub fn is_valid(&self) -> bool {
-        matches!(self, FacilitatorVerifyResponse::Valid(_))
-    }
-
-    pub fn valid(valid: FacilitatorVerifyValid) -> Self {
-        FacilitatorVerifyResponse::Valid(valid)
-    }
-
-    pub fn invalid(invalid: FacilitatorVerifyInvalid) -> Self {
-        FacilitatorVerifyResponse::Invalid(invalid)
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FacilitatorVerifyValid {
-    pub payer: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FacilitatorVerifyInvalid {
-    pub invalid_reason: String,
-    pub payer: Option<String>,
-}
-
-#[derive(Debug, Clone)]
-pub enum FacilitatorSettleResponse {
-    Success(FacilitatorSettleSuccess),
-    Failed(FacilitatorSettleFailed),
-}
-
-impl FacilitatorSettleResponse {
-    pub fn is_success(&self) -> bool {
-        matches!(self, FacilitatorSettleResponse::Success(_))
-    }
-
-    pub fn success(success: FacilitatorSettleSuccess) -> Self {
-        FacilitatorSettleResponse::Success(success)
-    }
-
-    pub fn failed(failed: FacilitatorSettleFailed) -> Self {
-        FacilitatorSettleResponse::Failed(failed)
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FacilitatorSettleSuccess {
-    pub payer: String,
-    pub transaction: String,
-    pub network: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FacilitatorSettleFailed {
-    pub error_reason: String,
-    pub payer: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FacilitatorSupportedKinds {
-    pub x402_version: X402Version,
-    pub scheme: String,
-    pub network: String,
-    pub extra: Option<AnyJson>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FacilitatorSupportedResponse {
-    pub kinds: Vec<FacilitatorSupportedKinds>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PaymentResponse {
-    pub success: bool,
-    pub transaction: String,
-    pub network: String,
-    pub payer: String,
-}
-
-impl From<FacilitatorSettleSuccess> for PaymentResponse {
-    fn from(success: FacilitatorSettleSuccess) -> Self {
-        PaymentResponse {
-            success: true,
-            transaction: success.transaction,
-            network: success.network,
-            payer: success.payer,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Base64EncodedHeader(pub String);
-
-impl Serialize for Base64EncodedHeader {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(&self.0)
-    }
-}
-
-impl<'de> Deserialize<'de> for Base64EncodedHeader {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        Ok(Base64EncodedHeader(s))
-    }
-}
-
-impl Display for Base64EncodedHeader {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
+    pub extensions: Record<Extension>,
 }
 
 impl TryFrom<PaymentPayload> for Base64EncodedHeader {
-    type Error = serde_json::Error;
+    type Error = crate::errors::Error;
 
+    /// Serialize PaymentPayload into `PAYMENT-SIGNATURE` header format
     fn try_from(value: PaymentPayload) -> Result<Self, Self::Error> {
         let json = serde_json::to_string(&value)?;
         let encoded = BASE64_STANDARD.encode(json);
@@ -204,6 +181,7 @@ impl TryFrom<PaymentPayload> for Base64EncodedHeader {
 impl TryFrom<Base64EncodedHeader> for PaymentPayload {
     type Error = crate::errors::Error;
 
+    /// Deserialize `PAYMENT-SIGNATURE` header into PaymentPayload
     fn try_from(value: Base64EncodedHeader) -> Result<Self, Self::Error> {
         let decoded_bytes = BASE64_STANDARD.decode(&value.0)?;
         let json_str = String::from_utf8(decoded_bytes)?;
@@ -212,23 +190,51 @@ impl TryFrom<Base64EncodedHeader> for PaymentPayload {
     }
 }
 
-impl TryFrom<PaymentResponse> for Base64EncodedHeader {
-    type Error = serde_json::Error;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SettlementResponse {
+    pub success: bool,
+    pub transaction: String,
+    pub network: String,
+    pub payer: String,
+}
 
-    fn try_from(value: PaymentResponse) -> Result<Self, Self::Error> {
+impl TryFrom<SettlementResponse> for Base64EncodedHeader {
+    type Error = crate::errors::Error;
+
+    /// Serialize SettlementResponse into `PAYMENT-RESPONSE` header format
+    fn try_from(value: SettlementResponse) -> Result<Self, Self::Error> {
         let json = serde_json::to_string(&value)?;
         let encoded = BASE64_STANDARD.encode(json);
         Ok(Base64EncodedHeader(encoded))
     }
 }
 
-impl TryFrom<Base64EncodedHeader> for PaymentResponse {
+impl TryFrom<Base64EncodedHeader> for SettlementResponse {
     type Error = crate::errors::Error;
 
+    /// Deserialize `PAYMENT-RESPONSE` header into SettlementResponse
     fn try_from(value: Base64EncodedHeader) -> Result<Self, Self::Error> {
         let decoded_bytes = BASE64_STANDARD.decode(&value.0)?;
         let json_str = String::from_utf8(decoded_bytes)?;
         let response = serde_json::from_str(&json_str)?;
         Ok(response)
+    }
+}
+
+impl<S, A> From<Payment<S, A>> for PaymentRequirements
+where
+    S: Scheme,
+    A: Address<Network = S::Network>,
+{
+    fn from(payment: Payment<S, A>) -> Self {
+        PaymentRequirements {
+            scheme: S::SCHEME_NAME.to_string(),
+            network: payment.scheme.network().network_id().to_string(),
+            amount: payment.amount,
+            asset: payment.asset.address.to_string(),
+            pay_to: payment.pay_to.to_string(),
+            max_timeout_seconds: payment.max_timeout_seconds,
+            extra: payment.extra,
+        }
     }
 }

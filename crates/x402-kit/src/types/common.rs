@@ -6,9 +6,78 @@ pub type Record<V> = std::collections::HashMap<String, V>;
 
 pub type AnyJson = serde_json::Value;
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct X402V1;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct X402V2;
+
+impl Serialize for X402V1 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_i8(1)
+    }
+}
+
+impl<'de> Deserialize<'de> for X402V1 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let v = i8::deserialize(deserializer)?;
+        match v {
+            1 => Ok(X402V1),
+            _ => Err(serde::de::Error::custom(format!(
+                "Unsupported X402 version {}; expected 1",
+                v
+            ))),
+        }
+    }
+}
+
+impl Display for X402V1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "1")
+    }
+}
+
+impl Serialize for X402V2 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_i8(2)
+    }
+}
+
+impl<'de> Deserialize<'de> for X402V2 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let v = i8::deserialize(deserializer)?;
+        match v {
+            2 => Ok(X402V2),
+            _ => Err(serde::de::Error::custom(format!(
+                "Unsupported X402 version {}; expected 2",
+                v
+            ))),
+        }
+    }
+}
+
+impl Display for X402V2 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "2")
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum X402Version {
-    V1,
+    V1(X402V1),
+    V2(X402V2),
 }
 
 impl Serialize for X402Version {
@@ -17,7 +86,8 @@ impl Serialize for X402Version {
         S: serde::Serializer,
     {
         match self {
-            X402Version::V1 => serializer.serialize_i8(1),
+            X402Version::V1(v) => v.serialize(serializer),
+            X402Version::V2(v) => v.serialize(serializer),
         }
     }
 }
@@ -29,9 +99,10 @@ impl<'de> Deserialize<'de> for X402Version {
     {
         let v = i8::deserialize(deserializer)?;
         match v {
-            1 => Ok(X402Version::V1),
+            1 => Ok(X402Version::V1(X402V1)),
+            2 => Ok(X402Version::V2(X402V2)),
             _ => Err(serde::de::Error::custom(format!(
-                "Unknown X402 version: {}",
+                "Unsupported X402 version {}; expected 1 or 2",
                 v
             ))),
         }
@@ -41,7 +112,52 @@ impl<'de> Deserialize<'de> for X402Version {
 impl Display for X402Version {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            X402Version::V1 => write!(f, "1"),
+            X402Version::V1(v) => write!(f, "{}", v),
+            X402Version::V2(v) => write!(f, "{}", v),
         }
+    }
+}
+
+impl X402Version {
+    pub fn as_v1(&self) -> Option<X402V1> {
+        match self {
+            X402Version::V1(v) => Some(*v),
+            _ => None,
+        }
+    }
+
+    pub fn as_v2(&self) -> Option<X402V2> {
+        match self {
+            X402Version::V2(v) => Some(*v),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Base64EncodedHeader(pub String);
+
+impl Serialize for Base64EncodedHeader {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.0)
+    }
+}
+
+impl<'de> Deserialize<'de> for Base64EncodedHeader {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Ok(Base64EncodedHeader(s))
+    }
+}
+
+impl Display for Base64EncodedHeader {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }

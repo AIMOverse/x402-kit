@@ -2,8 +2,7 @@ use bon::Builder;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    concepts::Scheme,
-    config::{PaymentRequirementsConfig, Resource, TransportConfig},
+    core::{Payment, Scheme},
     networks::evm::{EvmAddress, EvmNetwork, EvmSignature, ExplicitEvmAsset, ExplicitEvmNetwork},
     transport::PaymentRequirements,
     types::{AmountValue, AnyJson},
@@ -137,22 +136,18 @@ pub struct ExactEvm<A: ExplicitEvmAsset> {
     pub pay_to: EvmAddress,
     pub amount: u64,
     pub max_timeout_seconds_override: Option<u64>,
-    pub resource: Resource,
     pub extra_override: Option<AnyJson>,
 }
 
-impl<A: ExplicitEvmAsset> ExactEvm<A> {
-    pub fn into_config(self) -> PaymentRequirementsConfig<ExactEvmScheme, EvmAddress> {
-        PaymentRequirementsConfig {
+impl<A: ExplicitEvmAsset> From<ExactEvm<A>> for Payment<ExactEvmScheme, EvmAddress> {
+    fn from(scheme: ExactEvm<A>) -> Self {
+        Payment {
             scheme: ExactEvmScheme(A::Network::NETWORK),
-            transport: TransportConfig {
-                pay_to: self.pay_to,
-                asset: A::ASSET,
-                amount: self.amount.into(),
-                max_timeout_seconds: self.max_timeout_seconds_override.unwrap_or(60),
-                resource: self.resource,
-            },
-            extra: self
+            pay_to: scheme.pay_to,
+            asset: A::ASSET,
+            amount: scheme.amount.into(),
+            max_timeout_seconds: scheme.max_timeout_seconds_override.unwrap_or(300),
+            extra: scheme
                 .extra_override
                 .or(A::EIP712_DOMAIN.and_then(|v| serde_json::to_value(v).ok())),
         }
@@ -160,9 +155,8 @@ impl<A: ExplicitEvmAsset> ExactEvm<A> {
 }
 
 impl<A: ExplicitEvmAsset> From<ExactEvm<A>> for PaymentRequirements {
-    /// Build PaymentRequirements from ExactEvm configuration
-    fn from(exact_evm: ExactEvm<A>) -> Self {
-        exact_evm.into_config().into()
+    fn from(scheme: ExactEvm<A>) -> Self {
+        PaymentRequirements::from(Payment::from(scheme))
     }
 }
 
@@ -170,7 +164,6 @@ impl<A: ExplicitEvmAsset> From<ExactEvm<A>> for PaymentRequirements {
 mod tests {
     use alloy_primitives::address;
     use serde_json::json;
-    use url::Url;
 
     use crate::networks::evm::assets::UsdcBaseSepolia;
 
@@ -178,39 +171,27 @@ mod tests {
 
     #[test]
     fn test_build_payment_requirements() {
-        let resource = Resource::builder()
-            .url(Url::parse("https://example.com/payment").unwrap())
-            .description("Payment for services".to_string())
-            .mime_type("application/json".to_string())
-            .build();
         let scheme = ExactEvm::builder()
             .asset(UsdcBaseSepolia)
             .amount(1000)
             .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
-            .resource(resource)
             .build();
-        let payment_requirements = PaymentRequirements::from(scheme);
+        let payment_requirements: PaymentRequirements = scheme.into();
 
         assert_eq!(payment_requirements.scheme, "exact");
         assert_eq!(
             payment_requirements.asset,
             UsdcBaseSepolia::ASSET.address.to_string()
         );
-        assert_eq!(payment_requirements.max_amount_required, 1000u64.into());
+        assert_eq!(payment_requirements.amount, 1000u64.into());
     }
 
     #[test]
     fn test_extra_override() {
-        let resource = Resource::builder()
-            .url(Url::parse("https://example.com/payment").unwrap())
-            .description("Payment for services".to_string())
-            .mime_type("application/json".to_string())
-            .build();
         let pr: PaymentRequirements = ExactEvm::builder()
             .asset(UsdcBaseSepolia)
             .amount(1000)
             .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
-            .resource(resource.clone())
             .build()
             .into();
 
@@ -224,7 +205,6 @@ mod tests {
             .asset(UsdcBaseSepolia)
             .amount(1000)
             .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
-            .resource(resource)
             .extra_override(json!({"foo": "bar"}))
             .build()
             .into();

@@ -3,7 +3,7 @@ use std::{fmt::Display, str::FromStr};
 use alloy_primitives::address;
 use solana_pubkey::pubkey;
 use x402_kit::{
-    concepts::{Address, NetworkFamily},
+    core::{Address, NetworkFamily},
     networks::{
         evm::{
             Eip712Domain, EvmAddress, EvmAsset, EvmNetwork, ExplicitEvmAsset, ExplicitEvmNetwork,
@@ -17,18 +17,25 @@ fn test_define_new_svm_network() {
     struct CustomSvmNetwork;
 
     impl ExplicitSvmNetwork for CustomSvmNetwork {
-        const NETWORK: SvmNetwork = SvmNetwork("custom-svm-network");
+        const NETWORK: SvmNetwork = SvmNetwork {
+            name: "custom-svm-network",
+            caip_2_id: "solana:genesis_block_hash",
+        };
     }
 
     let network: SvmNetwork = CustomSvmNetwork::NETWORK;
     assert_eq!(network.network_name(), "custom-svm-network");
+    assert_eq!(network.network_id(), "solana:genesis_block_hash");
 }
 
 #[test]
 fn test_define_new_svm_asset() {
     struct MyCustomSvmNetwork;
     impl ExplicitSvmNetwork for MyCustomSvmNetwork {
-        const NETWORK: SvmNetwork = SvmNetwork("my-svm-network");
+        const NETWORK: SvmNetwork = SvmNetwork {
+            name: "custom-svm-network",
+            caip_2_id: "solana:genesis_block_hash",
+        };
     }
 
     struct MyCustomSvmToken;
@@ -61,6 +68,7 @@ fn test_define_new_evm_network() {
         const NETWORK: EvmNetwork = EvmNetwork {
             name: "custom-evm-network",
             chain_id: 12345,
+            network_id: "eip155:12345",
         };
     }
 
@@ -76,6 +84,7 @@ fn test_define_new_evm_asset() {
         const NETWORK: EvmNetwork = EvmNetwork {
             name: "my-network",
             chain_id: 99999,
+            network_id: "eip155:99999",
         };
     }
 
@@ -115,7 +124,7 @@ fn test_define_new_evm_asset() {
 fn test_define_network_family() {
     struct MyNetworkFamily {
         network_name: &'static str,
-        network_id: u64,
+        network_id: &'static str,
     }
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -139,20 +148,23 @@ fn test_define_network_family() {
         fn network_name(&self) -> &str {
             self.network_name
         }
+        fn network_id(&self) -> &str {
+            self.network_id
+        }
     }
 
     impl Address for MyAddress {
         type Network = MyNetworkFamily;
     }
 
-    pub type _MyAsset = x402_kit::concepts::Asset<MyAddress>;
+    pub type _MyAsset = x402_kit::core::Asset<MyAddress>;
 
     let network = MyNetworkFamily {
         network_name: "my-network",
-        network_id: 42,
+        network_id: "42",
     };
     assert_eq!(network.network_name(), "my-network");
-    assert_eq!(network.network_id, 42);
+    assert_eq!(network.network_id(), "42");
 
     let address: MyAddress = "100".parse().unwrap();
     assert_eq!(address.to_string(), "100");

@@ -2,8 +2,7 @@ use bon::Builder;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    concepts::Scheme,
-    config::{PaymentRequirementsConfig, Resource, TransportConfig},
+    core::{Payment, Scheme},
     networks::svm::{ExplicitSvmAsset, ExplicitSvmNetwork, SvmAddress, SvmNetwork},
     transport::PaymentRequirements,
 };
@@ -15,29 +14,24 @@ pub struct ExactSvm<A: ExplicitSvmAsset> {
     pub pay_to: SvmAddress,
     pub amount: u64,
     pub max_timeout_seconds_override: Option<u64>,
-    pub resource: Resource,
 }
 
-impl<A: ExplicitSvmAsset> ExactSvm<A> {
-    pub fn into_config(self) -> PaymentRequirementsConfig<ExactSvmScheme, SvmAddress> {
-        PaymentRequirementsConfig {
+impl<A: ExplicitSvmAsset> From<ExactSvm<A>> for Payment<ExactSvmScheme, SvmAddress> {
+    fn from(scheme: ExactSvm<A>) -> Self {
+        Payment {
             scheme: ExactSvmScheme(A::Network::NETWORK),
-            transport: TransportConfig::builder()
-                .amount(self.amount)
-                .asset(A::ASSET)
-                .pay_to(self.pay_to)
-                .max_timeout_seconds(self.max_timeout_seconds_override.unwrap_or(60))
-                .resource(self.resource)
-                .build(),
-            // Fee payer should be updated with facilitator's supported networks list
+            pay_to: scheme.pay_to,
+            asset: A::ASSET,
+            amount: scheme.amount.into(),
+            max_timeout_seconds: scheme.max_timeout_seconds_override.unwrap_or(300),
             extra: None,
         }
     }
 }
 
 impl<A: ExplicitSvmAsset> From<ExactSvm<A>> for PaymentRequirements {
-    fn from(value: ExactSvm<A>) -> Self {
-        value.into_config().into()
+    fn from(scheme: ExactSvm<A>) -> Self {
+        PaymentRequirements::from(Payment::from(scheme))
     }
 }
 
@@ -62,35 +56,24 @@ pub struct ExplicitSvmPayload {
 #[cfg(test)]
 mod tests {
     use solana_pubkey::pubkey;
-    use url::Url;
 
     use crate::{
-        config::Resource, networks::svm::assets::UsdcSolanaDevnet, schemes::exact_svm::ExactSvm,
+        networks::svm::assets::UsdcSolanaDevnet, schemes::exact_svm::ExactSvm,
         transport::PaymentRequirements,
     };
 
     #[test]
     fn test_build_payment_requirements() {
-        let resource = Resource::builder()
-            .url(Url::parse("https://example.com/payment").unwrap())
-            .description("Payment for services".to_string())
-            .mime_type("application/json".to_string())
-            .build();
         let pr: PaymentRequirements = ExactSvm::builder()
             .asset(UsdcSolanaDevnet)
             .amount(1000)
             .pay_to(pubkey!("Ge3jkza5KRfXvaq3GELNLh6V1pjjdEKNpEdGXJgjjKUR"))
-            .resource(resource)
             .build()
             .into();
 
         assert_eq!(pr.scheme, "exact");
-        assert_eq!(pr.network, "solana-devnet");
-        assert_eq!(pr.max_amount_required, 1000u64.into());
-        assert_eq!(
-            pr.resource,
-            Url::parse("https://example.com/payment").unwrap()
-        );
+        assert_eq!(pr.network, "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1");
+        assert_eq!(pr.amount, 1000u64.into());
         assert!(pr.extra.is_none());
     }
 }

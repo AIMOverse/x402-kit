@@ -3,12 +3,11 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::{
-    concepts::Facilitator,
-    transport::{
-        FacilitatorPaymentRequest, FacilitatorSettleFailed, FacilitatorSettleResponse,
-        FacilitatorSettleSuccess, FacilitatorSupportedResponse, FacilitatorVerifyInvalid,
-        FacilitatorVerifyResponse, FacilitatorVerifyValid, PaymentPayload, PaymentRequirements,
+    facilitator::{
+        Facilitator, PaymentRequest, SettleFailed, SettleResult, SettleSuccess, SupportedResponse,
+        VerifyInvalid, VerifyResult, VerifyValid,
     },
+    transport::{PaymentPayload, PaymentRequirements},
 };
 
 /// A remote facilitator client that communicates over HTTP.
@@ -22,11 +21,11 @@ use crate::{
 /// - `SReq`: The request type for settlement, must be convertible from `FacilitatorPaymentRequest` and serializable.
 /// - `SRes`: The response type for settlement, must be convertible into `FacilitatorSettleResponse` and deserializable.
 #[derive(Debug, Clone)]
-pub struct RemoteFacilitatorClient<VReq, VRes, SReq, SRes>
+pub struct FacilitatorClient<VReq, VRes, SReq, SRes>
 where
-    VReq: From<FacilitatorPaymentRequest> + Serialize,
+    VReq: From<PaymentRequest> + Serialize,
     VRes: IntoVerifyResponse + for<'de> Deserialize<'de>,
-    SReq: From<FacilitatorPaymentRequest> + Serialize,
+    SReq: From<PaymentRequest> + Serialize,
     SRes: IntoSettleResponse + for<'de> Deserialize<'de>,
 {
     pub base_url: Url,
@@ -38,11 +37,11 @@ where
 }
 
 pub trait IntoVerifyResponse {
-    fn into_verify_response(self) -> FacilitatorVerifyResponse;
+    fn into_verify_response(self) -> VerifyResult;
 }
 
 pub trait IntoSettleResponse {
-    fn into_settle_response(self) -> FacilitatorSettleResponse;
+    fn into_settle_response(self) -> SettleResult;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -72,23 +71,23 @@ pub struct DefaultSettleResponse {
     pub network: Option<String>,
 }
 
-impl From<FacilitatorPaymentRequest> for DefaultPaymentRequest {
-    fn from(request: FacilitatorPaymentRequest) -> Self {
+impl From<PaymentRequest> for DefaultPaymentRequest {
+    fn from(request: PaymentRequest) -> Self {
         DefaultPaymentRequest {
-            payment_payload: request.payload.payment_payload,
-            payment_requirements: request.payload.payment_requirements,
+            payment_payload: request.payment_payload,
+            payment_requirements: request.payment_requirements,
         }
     }
 }
 
 impl IntoVerifyResponse for DefaultVerifyResponse {
-    fn into_verify_response(self) -> FacilitatorVerifyResponse {
+    fn into_verify_response(self) -> VerifyResult {
         if self.is_valid {
-            FacilitatorVerifyResponse::valid(FacilitatorVerifyValid {
+            VerifyResult::valid(VerifyValid {
                 payer: self.payer.unwrap_or_default(),
             })
         } else {
-            FacilitatorVerifyResponse::invalid(FacilitatorVerifyInvalid {
+            VerifyResult::invalid(VerifyInvalid {
                 invalid_reason: self.invalid_reason.unwrap_or_default(),
                 payer: self.payer,
             })
@@ -97,15 +96,15 @@ impl IntoVerifyResponse for DefaultVerifyResponse {
 }
 
 impl IntoSettleResponse for DefaultSettleResponse {
-    fn into_settle_response(self) -> FacilitatorSettleResponse {
+    fn into_settle_response(self) -> SettleResult {
         if self.success {
-            FacilitatorSettleResponse::success(FacilitatorSettleSuccess {
+            SettleResult::success(SettleSuccess {
                 payer: self.payer.unwrap_or_default(),
                 transaction: self.transaction.unwrap_or_default(),
                 network: self.network.unwrap_or_default(),
             })
         } else {
-            FacilitatorSettleResponse::failed(FacilitatorSettleFailed {
+            SettleResult::failed(SettleFailed {
                 error_reason: self.error_reason.unwrap_or_default(),
                 payer: self.payer,
             })
@@ -114,22 +113,22 @@ impl IntoSettleResponse for DefaultSettleResponse {
 }
 
 /// A type alias for a RemoteFacilitatorClient using the default request and response types.
-pub type DefaultRemoteFacilitatorClient = RemoteFacilitatorClient<
+pub type StandardFacilitatorClient = FacilitatorClient<
     DefaultPaymentRequest,
     DefaultVerifyResponse,
     DefaultPaymentRequest,
     DefaultSettleResponse,
 >;
 
-impl<VReq, VRes, SReq, SRes> RemoteFacilitatorClient<VReq, VRes, SReq, SRes>
+impl<VReq, VRes, SReq, SRes> FacilitatorClient<VReq, VRes, SReq, SRes>
 where
-    VReq: From<FacilitatorPaymentRequest> + Serialize,
+    VReq: From<PaymentRequest> + Serialize,
     VRes: IntoVerifyResponse + for<'de> Deserialize<'de>,
-    SReq: From<FacilitatorPaymentRequest> + Serialize,
+    SReq: From<PaymentRequest> + Serialize,
     SRes: IntoSettleResponse + for<'de> Deserialize<'de>,
 {
     pub fn new_from_url(base_url: Url) -> Self {
-        RemoteFacilitatorClient {
+        FacilitatorClient {
             base_url,
             client: reqwest::Client::new(),
             supported_headers: HeaderMap::new(),
@@ -139,13 +138,11 @@ where
         }
     }
 
-    pub fn with_verify_request_type<NewVReq>(
-        self,
-    ) -> RemoteFacilitatorClient<NewVReq, VRes, SReq, SRes>
+    pub fn with_verify_request_type<NewVReq>(self) -> FacilitatorClient<NewVReq, VRes, SReq, SRes>
     where
-        NewVReq: From<FacilitatorPaymentRequest> + Serialize,
+        NewVReq: From<PaymentRequest> + Serialize,
     {
-        RemoteFacilitatorClient {
+        FacilitatorClient {
             base_url: self.base_url,
             client: self.client,
             supported_headers: self.supported_headers,
@@ -155,13 +152,11 @@ where
         }
     }
 
-    pub fn with_verify_response_type<NewVRes>(
-        self,
-    ) -> RemoteFacilitatorClient<VReq, NewVRes, SReq, SRes>
+    pub fn with_verify_response_type<NewVRes>(self) -> FacilitatorClient<VReq, NewVRes, SReq, SRes>
     where
         NewVRes: IntoVerifyResponse + for<'de> Deserialize<'de>,
     {
-        RemoteFacilitatorClient {
+        FacilitatorClient {
             supported_headers: self.supported_headers,
             base_url: self.base_url,
             verify_headers: self.verify_headers,
@@ -171,13 +166,11 @@ where
         }
     }
 
-    pub fn with_settle_request_type<NewSReq>(
-        self,
-    ) -> RemoteFacilitatorClient<VReq, VRes, NewSReq, SRes>
+    pub fn with_settle_request_type<NewSReq>(self) -> FacilitatorClient<VReq, VRes, NewSReq, SRes>
     where
-        NewSReq: From<FacilitatorPaymentRequest> + Serialize,
+        NewSReq: From<PaymentRequest> + Serialize,
     {
-        RemoteFacilitatorClient {
+        FacilitatorClient {
             supported_headers: self.supported_headers,
             base_url: self.base_url,
             verify_headers: self.verify_headers,
@@ -187,13 +180,11 @@ where
         }
     }
 
-    pub fn with_settle_response_type<NewSRes>(
-        self,
-    ) -> RemoteFacilitatorClient<VReq, VRes, SReq, NewSRes>
+    pub fn with_settle_response_type<NewSRes>(self) -> FacilitatorClient<VReq, VRes, SReq, NewSRes>
     where
         NewSRes: IntoSettleResponse + for<'de> Deserialize<'de>,
     {
-        RemoteFacilitatorClient {
+        FacilitatorClient {
             supported_headers: self.supported_headers,
             base_url: self.base_url,
             verify_headers: self.verify_headers,
@@ -227,7 +218,7 @@ where
 }
 
 impl
-    RemoteFacilitatorClient<
+    FacilitatorClient<
         DefaultPaymentRequest,
         DefaultVerifyResponse,
         DefaultPaymentRequest,
@@ -235,30 +226,30 @@ impl
     >
 {
     pub fn from_url(base_url: Url) -> Self {
-        RemoteFacilitatorClient::new_from_url(base_url)
+        FacilitatorClient::new_from_url(base_url)
     }
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum RemoteFacilitatorClientError {
+pub enum FacilitatorClientError {
     #[error("URL parse error: {0}")]
     UrlParseError(#[from] url::ParseError),
     #[error("HTTP request error: {0}")]
     HttpRequestError(#[from] reqwest::Error),
-    #[error("Serialization/Deserialization error: {0}")]
-    SerdeError(#[from] serde_json::Error),
+    #[error("JSON Serialization/Deserialization error: {0}")]
+    SerdeJsonError(#[from] serde_json::Error),
 }
 
-impl<VReq, VRes, SReq, SRes> Facilitator for RemoteFacilitatorClient<VReq, VRes, SReq, SRes>
+impl<VReq, VRes, SReq, SRes> Facilitator for FacilitatorClient<VReq, VRes, SReq, SRes>
 where
-    VReq: From<FacilitatorPaymentRequest> + Serialize,
+    VReq: From<PaymentRequest> + Serialize,
     VRes: IntoVerifyResponse + for<'de> Deserialize<'de>,
-    SReq: From<FacilitatorPaymentRequest> + Serialize,
+    SReq: From<PaymentRequest> + Serialize,
     SRes: IntoSettleResponse + for<'de> Deserialize<'de>,
 {
-    type Error = RemoteFacilitatorClientError;
+    type Error = FacilitatorClientError;
 
-    async fn supported(&self) -> Result<FacilitatorSupportedResponse, Self::Error> {
+    async fn supported(&self) -> Result<SupportedResponse, Self::Error> {
         let supported = self
             .client
             .get(self.base_url.join("supported")?)
@@ -271,10 +262,7 @@ where
         Ok(supported)
     }
 
-    async fn verify(
-        &self,
-        request: FacilitatorPaymentRequest,
-    ) -> Result<FacilitatorVerifyResponse, Self::Error> {
+    async fn verify(&self, request: PaymentRequest) -> Result<VerifyResult, Self::Error> {
         let result = self
             .client
             .post(self.base_url.join("verify")?)
@@ -288,10 +276,7 @@ where
         Ok(result.into_verify_response())
     }
 
-    async fn settle(
-        &self,
-        request: FacilitatorPaymentRequest,
-    ) -> Result<FacilitatorSettleResponse, Self::Error> {
+    async fn settle(&self, request: PaymentRequest) -> Result<SettleResult, Self::Error> {
         let result = self
             .client
             .post(self.base_url.join("settle")?)

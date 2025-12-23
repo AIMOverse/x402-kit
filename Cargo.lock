@@ -3926,6 +3926,7 @@ dependencies = [
  "tower",
  "tower-layer",
  "tower-service",
+ "tracing",
 ]
 
 [[package]]
@@ -4501,13 +4502,12 @@ dependencies = [
 
 [[package]]
 name = "x402-kit"
-version = "0.3.2"
+version = "2.0.0"
 dependencies = [
  "alloy",
  "alloy-core",
  "alloy-primitives",
  "alloy-signer",
- "axum",
  "base64",
  "bincode",
  "bon",
@@ -4521,11 +4521,27 @@ dependencies = [
  "solana-signature",
  "thiserror",
  "tokio",
- "tower",
+ "url",
+]
+
+[[package]]
+name = "x402-paywall"
+version = "2.0.0"
+dependencies = [
+ "alloy",
+ "axum",
+ "bon",
+ "futures-util",
+ "http",
+ "serde_json",
+ "solana-pubkey",
+ "tokio",
+ "tower-http",
  "tracing",
  "tracing-subscriber",
  "url",
  "url-macro",
+ "x402-kit",
 ]
 
 [[package]]

@@ -1,0 +1,33 @@
+[package]
+name = "x402-paywall"
+version = "2.0.0"
+edition = "2024"
+repository = "https://github.com/AIMOverse/x402-kit"
+authors = ["Archer <archer@aimo.network>"]
+license = "MIT"
+description = "A fully modular SDK for building complex X402 payment integrations."
+
+[features]
+default = ["tracing", "axum"]
+tracing = ["dep:tracing"]
+axum = ["dep:axum"]
+
+[dependencies]
+x402-kit = { version = "2.0", path = "../x402-kit", default-features = false }
+http = { version = "1.4" }
+bon = { version = "3.8" }
+tracing = { version = "0.1", optional = true }
+serde_json = { version = "1.0" }
+axum = { version = "0.8", optional = true }
+
+[dev-dependencies]
+url = { version = "2.5" }
+url-macro = { version = "0.2" }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+axum = { version = "0.8" }
+tracing-subscriber = { version = "0.3" }
+alloy = { version = "1" }
+x402-kit = { path = "../x402-kit" }
+tower-http = { version = "0.6", features = ["trace"] }
+futures-util = { version = "0.3" }
+solana-pubkey = { version = "4" }
