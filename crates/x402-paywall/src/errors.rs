@@ -6,7 +6,10 @@ use x402_kit::{transport::PaymentRequired, types::Base64EncodedHeader};
 pub struct ErrorResponse {
     pub status: StatusCode,
     pub header: ErrorResponseHeader,
-    pub body: PaymentRequired,
+    /// The body of the error response.
+    ///
+    /// Body is Boxed to reduce size of the struct.
+    pub body: Box<PaymentRequired>,
 }
 
 /// Represents the type of error header to include in a paywall error response.

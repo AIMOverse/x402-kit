@@ -231,12 +231,14 @@ impl<'pw, F: Facilitator, Res> ResponseProcessor<'pw, F, Res> {
 
             let header = Base64EncodedHeader::try_from(settlement_response)
                 .inspect_err(|err| {
+                    #[cfg(feature = "tracing")]
                     tracing::warn!("Failed to encode PAYMENT-RESPONSE header: {err}; skipping")
                 })
                 .ok()
                 .and_then(|h| {
                     HeaderValue::from_str(&h.0)
                         .inspect_err(|err| {
+                            #[cfg(feature = "tracing")]
                             tracing::warn!(
                                 "Failed to encode PAYMENT-RESPONSE header: {err}; skipping"
                             )

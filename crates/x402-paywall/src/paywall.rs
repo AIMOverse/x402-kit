@@ -225,7 +225,7 @@ impl<F: Facilitator> PayWall<F> {
             .ok_or_else(|| self.payment_required())
             .and_then(|h| {
                 h.to_str().map_err(|err| {
-                    self.invalid_payment(&format!(
+                    self.invalid_payment(format!(
                         "Failed to decode PAYMENT-SIGNATURE header: {err}"
                     ))
                 })
@@ -233,7 +233,7 @@ impl<F: Facilitator> PayWall<F> {
             .map(|s| Base64EncodedHeader(s.to_string()))?;
 
         let payload = PaymentPayload::try_from(payment_signature.clone()).map_err(|err| {
-            self.invalid_payment(&format!("Failed to parse PAYMENT-SIGNATURE header: {err}"))
+            self.invalid_payment(format!("Failed to parse PAYMENT-SIGNATURE header: {err}"))
         })?;
 
         let initial_state = PaymentState {
@@ -316,7 +316,7 @@ impl<F: Facilitator> PayWall<F> {
         ErrorResponse {
             status: StatusCode::PAYMENT_REQUIRED,
             header: ErrorResponseHeader::PaymentRequired(header),
-            body: payment_required,
+            body: Box::new(payment_required),
         }
     }
 
@@ -337,7 +337,7 @@ impl<F: Facilitator> PayWall<F> {
         ErrorResponse {
             status: StatusCode::BAD_REQUEST,
             header: ErrorResponseHeader::PaymentResponse(header),
-            body: payment_required,
+            body: Box::new(payment_required),
         }
     }
 
@@ -358,7 +358,7 @@ impl<F: Facilitator> PayWall<F> {
         ErrorResponse {
             status: StatusCode::PAYMENT_REQUIRED,
             header: ErrorResponseHeader::PaymentResponse(header),
-            body: payment_required,
+            body: Box::new(payment_required),
         }
     }
 
@@ -379,7 +379,7 @@ impl<F: Facilitator> PayWall<F> {
         ErrorResponse {
             status: StatusCode::INTERNAL_SERVER_ERROR,
             header: ErrorResponseHeader::PaymentResponse(header),
-            body: payment_required,
+            body: Box::new(payment_required),
         }
     }
 }
