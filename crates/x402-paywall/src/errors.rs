@@ -1,5 +1,5 @@
 use http::{HeaderName, HeaderValue, StatusCode};
-use x402_kit::{transport::PaymentRequired, types::Base64EncodedHeader};
+use x402_core::{transport::PaymentRequired, types::Base64EncodedHeader};
 
 /// Represents an error response from the paywall.
 #[derive(Debug, Clone)]

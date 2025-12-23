@@ -1,5 +1,5 @@
 use http::{HeaderValue, Request, Response};
-use x402_kit::{
+use x402_core::{
     facilitator::{
         Facilitator, PaymentRequest, SettleResult, SettleSuccess, VerifyResult, VerifyValid,
     },

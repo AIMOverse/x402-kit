@@ -153,15 +153,6 @@ where
     }
 }
 
-impl<T> From<T> for EvmAsset
-where
-    T: ExplicitEvmAsset,
-{
-    fn from(_: T) -> Self {
-        T::ASSET
-    }
-}
-
 pub mod networks {
     use super::*;
 

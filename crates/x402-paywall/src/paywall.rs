@@ -6,7 +6,7 @@ use std::fmt::Display;
 
 use bon::Builder;
 use http::{Request, Response, StatusCode};
-use x402_kit::{
+use x402_core::{
     core::Resource,
     facilitator::{Facilitator, SupportedResponse},
     transport::{Accepts, PaymentPayload, PaymentRequired},
@@ -413,7 +413,7 @@ pub fn filter_supported_accepts(supported: &SupportedResponse, accepts: Accepts)
 #[cfg(test)]
 mod tests {
     use serde_json::json;
-    use x402_kit::{
+    use x402_core::{
         facilitator::SupportedResponse,
         transport::{Accepts, PaymentRequirements},
         types::AmountValue,

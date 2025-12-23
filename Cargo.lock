@@ -4502,6 +4502,18 @@ dependencies = [
 
 [[package]]
 name = "x402-core"
+version = "2.1.0"
+dependencies = [
+ "base64",
+ "bon",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "url",
+]
+
+[[package]]
+name = "x402-extensions"
 version = "0.1.0"
 
 [[package]]
@@ -4512,9 +4524,10 @@ dependencies = [
  "alloy-core",
  "alloy-primitives",
  "alloy-signer",
- "base64",
+ "axum",
  "bincode",
  "bon",
+ "futures-util",
  "hex",
  "http",
  "rand 0.9.2",
@@ -4525,27 +4538,25 @@ dependencies = [
  "solana-signature",
  "thiserror",
  "tokio",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
  "url",
+ "url-macro",
+ "x402-core",
+ "x402-paywall",
 ]
 
 [[package]]
 name = "x402-paywall"
 version = "2.1.0"
 dependencies = [
- "alloy",
  "axum",
  "bon",
- "futures-util",
  "http",
  "serde_json",
- "solana-pubkey",
- "tokio",
- "tower-http",
  "tracing",
- "tracing-subscriber",
- "url",
- "url-macro",
- "x402-kit",
+ "x402-core",
 ]
 
 [[package]]

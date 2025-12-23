@@ -343,13 +343,28 @@
 //! ```
 //!
 
-pub mod core;
-pub mod errors;
-pub mod facilitator;
+pub mod core {
+    pub use x402_core::core::*;
+}
+
+pub mod transport {
+    pub use x402_core::transport::*;
+}
+
+pub mod types {
+    pub use x402_core::types::*;
+}
+
+pub mod facilitator {
+    pub use x402_core::facilitator::*;
+}
+
+pub mod errors {
+    pub use x402_core::errors::*;
+}
+
 pub mod networks;
 pub mod schemes;
-pub mod transport;
-pub mod types;
 
 #[cfg(feature = "facilitator-client")]
 pub mod facilitator_client;
