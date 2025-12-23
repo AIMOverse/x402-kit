@@ -32,6 +32,8 @@ jobs:
           - "facilitator-client"
           - "evm-signer"
           - "svm-signer"
+          - "paywall"
+          - "axum"
           - "all" # marker for all features
     steps:
       - uses: actions/checkout@v6
