@@ -25,6 +25,7 @@ pub struct PayWall<F: Facilitator> {
     /// The resource this paywall serves.
     pub resource: Resource,
     /// The accepted payment requirements.
+    #[builder(into)]
     pub accepts: Accepts,
     /// Additional extensions to use.
     #[builder(default)]
@@ -129,6 +130,17 @@ impl From<PayWallErrorResponse> for Response<Full<Bytes>> {
         let mut response = Response::new(Full::new(Bytes::from_iter(body)));
         *response.status_mut() = value.status;
         if let Some((name, val)) = value.header.header_value() {
+            response.headers_mut().insert(name, val);
+        }
+        response
+    }
+}
+
+#[cfg(feature = "axum")]
+impl axum::response::IntoResponse for PayWallErrorResponse {
+    fn into_response(self) -> axum::response::Response {
+        let mut response = (self.status, axum::extract::Json(self.body)).into_response();
+        if let Some((name, val)) = self.header.header_value() {
             response.headers_mut().insert(name, val);
         }
         response

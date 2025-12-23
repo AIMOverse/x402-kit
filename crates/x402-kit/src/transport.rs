@@ -42,6 +42,15 @@ impl From<Resource> for PaymentResource {
 #[derive(Clone, Default)]
 pub struct Accepts(Vec<PaymentRequirements>);
 
+impl<T> From<T> for Accepts
+where
+    T: Into<PaymentRequirements>,
+{
+    fn from(value: T) -> Self {
+        Accepts(vec![value.into()])
+    }
+}
+
 impl IntoIterator for Accepts {
     type Item = PaymentRequirements;
     type IntoIter = std::vec::IntoIter<PaymentRequirements>;

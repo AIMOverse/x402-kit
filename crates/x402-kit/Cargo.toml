@@ -41,8 +41,5 @@ bincode = { version = "2.0", features = ["serde"], optional = true }
 http = { version = "1.4", optional = true }
 
 [dev-dependencies]
-url-macro = { version = "0.2" }
-tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-axum = { version = "0.8" }
-tracing-subscriber = { version = "0.3" }
 alloy = { version = "1" }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
