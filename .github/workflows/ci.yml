@@ -45,6 +45,7 @@ jobs:
         features:
           - "" # no extra features
           - "tracing"
+          - "axum"
           - "all" # marker for all features
     steps:
       - uses: actions/checkout@v6

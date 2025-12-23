@@ -10,6 +10,26 @@ use x402_kit::{
 use crate::{errors::ErrorResponse, paywall::PayWall};
 
 /// The state of a payment processed by the paywall when accessing the resource handler.
+///
+/// This state is attached to the request extensions before running the resource handler,
+/// and can be accessed within the handler to inspect the payment status.
+///
+/// # Example
+///
+/// ```rust
+/// use axum::{extract::{Extension, Request}, Json, response::Response};
+/// use serde_json::{json, Value};
+/// use x402_kit::facilitator::{VerifyValid, SettleSuccess};
+/// use x402_paywall::processor::PaymentState;
+///
+/// async fn example_handler(Extension(payment_state): Extension<PaymentState>) -> Json<Value> {
+///     Json(json!({
+///         "message": "You have accessed a protected resource!",
+///         "verify_state": serde_json::to_value(&payment_state.verified).unwrap_or(json!(null)),
+///         "settle_state": serde_json::to_value(&payment_state.settled).unwrap_or(json!(null)),
+///     }))
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub struct PaymentState {
     /// Verification result, if verification was performed.
@@ -23,6 +43,8 @@ pub struct PaymentState {
 }
 
 /// Payment processing state before running the resource handler.
+///
+/// See [`PayWall`] for usage in the full payment processing flow.
 pub struct RequestProcessor<'pw, F: Facilitator, Req> {
     pub paywall: &'pw PayWall<F>,
     pub request: Request<Req>,
@@ -103,7 +125,7 @@ impl<'pw, F: Facilitator, Req> RequestProcessor<'pw, F, Req> {
 
     /// Run the resource handler with the payment state attached to the request extensions.
     ///
-    /// After running the handler, returns a [`PayWallResponse`] for further processing.
+    /// After running the handler, returns a [`ResponseProcessor`] for further processing.
     pub async fn run_handler<Fun, Fut, Res>(
         mut self,
         handler: Fun,

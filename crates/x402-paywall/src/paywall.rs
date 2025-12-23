@@ -1,3 +1,7 @@
+//! HTTP Paywall using X402 payments and a facilitator.
+//!
+//! For details, see the [`PayWall`] struct documentation.
+
 use std::fmt::Display;
 
 use bon::Builder;
@@ -14,7 +18,183 @@ use crate::{
     processor::{PaymentState, RequestProcessor},
 };
 
-/// A http paywall that uses a facilitator to verify and settle payments.
+/// A HTTP paywall that uses a facilitator to verify and settle payments.
+///
+/// `PayWall` provides a flexible and composable API for protecting resources with X402 payments.
+/// It handles the full payment flow including verification and settlement through a configured facilitator.
+///
+/// ## Type Parameters
+///
+/// - `F`: The facilitator type that implements [`Facilitator`] for payment verification and settlement.
+///
+/// ## Building a PayWall
+///
+/// Use the builder pattern to construct a `PayWall`:
+///
+/// ```rust
+/// use alloy::primitives::address;
+/// use url_macro::url;
+/// use x402_kit::{
+///     core::Resource,
+///     facilitator_client::FacilitatorClient,
+///     networks::evm::assets::UsdcBaseSepolia,
+///     schemes::exact_evm::ExactEvm,
+/// };
+/// use x402_paywall::paywall::PayWall;
+///
+/// let facilitator = FacilitatorClient::from_url(url!("https://facilitator.example.com"));
+///
+/// let paywall = PayWall::builder()
+///     .facilitator(facilitator)
+///     .accepts(
+///         ExactEvm::builder()
+///             .amount(1000)
+///             .asset(UsdcBaseSepolia)
+///             .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
+///             .build(),
+///     )
+///     .resource(
+///         Resource::builder()
+///             .url(url!("https://example.com/resource/standard"))
+///             .description("X402 payment protected resource")
+///             .mime_type("application/json")
+///             .build(),
+///     )
+///     .build();
+/// ```
+///
+/// ## Multiple Payment Options
+///
+/// You can accept multiple payment methods (e.g., EVM and SVM):
+///
+/// ```rust
+/// use alloy::primitives::address;
+/// use solana_pubkey::pubkey;
+/// use url_macro::url;
+/// use x402_kit::{
+///     core::Resource,
+///     facilitator_client::FacilitatorClient,
+///     networks::{evm::assets::UsdcBaseSepolia, svm::assets::UsdcSolanaDevnet},
+///     schemes::{exact_evm::ExactEvm, exact_svm::ExactSvm},
+///     transport::Accepts,
+/// };
+/// use x402_paywall::paywall::PayWall;
+///
+/// let facilitator = FacilitatorClient::from_url(url!("https://facilitator.example.com"));
+///
+/// let paywall = PayWall::builder()
+///     .facilitator(facilitator)
+///     .accepts(
+///         Accepts::new()
+///             .push(
+///                 ExactEvm::builder()
+///                     .amount(1000)
+///                     .asset(UsdcBaseSepolia)
+///                     .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
+///                     .build(),
+///             )
+///             .push(
+///                 ExactSvm::builder()
+///                     .amount(1000)
+///                     .asset(UsdcSolanaDevnet)
+///                     .pay_to(pubkey!("Ge3jkza5KRfXvaq3GELNLh6V1pjjdEKNpEdGXJgjjKUR"))
+///                     .build(),
+///             ),
+///     )
+///     .resource(
+///         Resource::builder()
+///             .url(url!("https://example.com/resource/multi"))
+///             .description("Multi-payment protected resource")
+///             .mime_type("application/json")
+///             .build(),
+///     )
+///     .build();
+/// ```
+///
+/// ## Usage with Axum
+///
+/// Here's how to use `PayWall` as middleware in an Axum application:
+///
+/// ```rust,ignore
+/// use axum::{
+///     extract::{Request, State},
+///     middleware::{from_fn_with_state, Next},
+///     response::{IntoResponse, Response},
+/// };
+/// use x402_paywall::paywall::PayWall;
+///
+/// async fn paywall_middleware(
+///     State(state): State<AppState>,
+///     req: Request,
+///     next: Next,
+/// ) -> Response {
+///     let paywall = PayWall::builder()
+///         .facilitator(state.facilitator)
+///         .accepts(/* ... */)
+///         .resource(/* ... */)
+///         .build();
+///
+///     // Standard flow: update accepts, verify, run handler, settle on success
+///     paywall
+///         .handle_payment(req, |req| next.run(req))
+///         .await
+///         .unwrap_or_else(|err| err.into_response())
+/// }
+/// ```
+///
+/// ## Step-by-Step API
+///
+/// The [`handle_payment`](PayWall::handle_payment) method provides a standard payment flow that internally
+/// uses the step-by-step API. It performs the following operations in order:
+///
+/// 1. **Update Accepts** ([`update_accepts`](PayWall::update_accepts)): Filters accepted payment requirements
+///    based on what the facilitator supports.
+/// 2. **Process Request** ([`process_request`](PayWall::process_request)): Extracts and validates the
+///    `PAYMENT-SIGNATURE` header, creating a [`RequestProcessor`].
+/// 3. **Verify** ([`RequestProcessor::verify`](crate::processor::RequestProcessor::verify)): Verifies the
+///    payment signature with the facilitator.
+/// 4. **Run Handler** ([`RequestProcessor::run_handler`](crate::processor::RequestProcessor::run_handler)):
+///    Executes the resource handler, injecting [`PaymentState`] into request extensions.
+/// 5. **Settle on Success** ([`ResponseProcessor::settle_on_success`](crate::processor::ResponseProcessor::settle_on_success)):
+///    Settles the payment only if the handler returned a successful response.
+///
+/// Here's a simplified view of `handle_payment`'s implementation:
+///
+/// ```rust,ignore
+/// let response = self
+///     .update_accepts()
+///     .await?
+///     .process_request(request)?
+///     .verify()
+///     .await?
+///     .run_handler(handler)
+///     .await?
+///     .settle_on_success()
+///     .await?
+///     .response();
+/// ```
+///
+/// ## Custom Payment Flow
+///
+/// For more control, use the step-by-step API directly. You can skip steps, reorder them,
+/// or add custom logic between steps:
+///
+/// ```rust,ignore
+/// use x402_paywall::paywall::PayWall;
+///
+/// async fn custom_flow(paywall: PayWall<impl Facilitator>, req: Request) -> Result<Response, ErrorResponse> {
+///     // Example: Skip verification, settle before running handler
+///     let response = paywall
+///         .process_request(req)?
+///         .settle()
+///         .await?
+///         .run_handler(|req| async { /* handler */ })
+///         .await?
+///         .response();
+///
+///     Ok(response)
+/// }
+/// ```
 #[derive(Builder, Debug, Clone)]
 pub struct PayWall<F: Facilitator> {
     /// The facilitator to use for payment verification and settlement.

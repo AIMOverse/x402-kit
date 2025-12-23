@@ -5,6 +5,11 @@
 //! X402-kit is **not a facilitator** — it's a composable SDK for buyers (signers) and sellers (servers) to build custom business logic.
 //! Future support for modular facilitator components is planned.
 //!
+//! ## Related Crates
+//!
+//! - **[`x402-paywall`](https://docs.rs/x402-paywall)**: A framework-agnostic HTTP paywall middleware
+//!   built on top of `x402-kit`. Use it to protect HTTP resources with X402 payments.
+//!
 //! ## Core Components Overview
 //!
 //! ### For the X402 Protocol
@@ -303,7 +308,7 @@
 //! ```
 //! use bon::Builder;
 //! use x402_kit::core::Payment;
-//! use x402_kit::networks::svm::{ExplicitSvmAsset, ExplicitSvmNetwork, SvmAddress};
+//! use x402_kit::networks::svm::{ExplicitSvmAsset, ExplicitSvmNetwork, SvmAddress, SvmNetwork};
 //! use x402_kit::schemes::exact_svm::ExactSvmScheme;
 //! use x402_kit::transport::PaymentRequirements;
 //!
@@ -315,18 +320,26 @@
 //!     pub amount: u64,
 //!     pub max_timeout_seconds_override: Option<u64>,
 //! }
-//! impl<A: ExplicitSvmAsset> ExactSvm<A> {
-//!     pub fn into_payment(self) -> Payment<ExactSvmScheme, SvmAddress> {
-//!         Payment::builder()
-//!             .scheme(ExactSvmScheme(A::Network::NETWORK))
-//!             .amount(self.amount)
-//!             .asset(A::ASSET)
-//!             .pay_to(self.pay_to)
-//!             .max_timeout_seconds(self.max_timeout_seconds_override.unwrap_or(60))
-//!             .build()
+//!
+//! impl<A: ExplicitSvmAsset> From<ExactSvm<A>> for Payment<ExactSvmScheme, SvmAddress> {
+//!     fn from(scheme: ExactSvm<A>) -> Self {
+//!         Payment {
+//!             scheme: ExactSvmScheme(A::Network::NETWORK),
+//!             pay_to: scheme.pay_to,
+//!             asset: A::ASSET,
+//!             amount: scheme.amount.into(),
+//!             max_timeout_seconds: scheme.max_timeout_seconds_override.unwrap_or(300),
+//!             extra: None,
+//!         }
 //!     }
 //! }
 //!
+//! // Then implement From for PaymentRequirements
+//! impl<A: ExplicitSvmAsset> From<ExactSvm<A>> for PaymentRequirements {
+//!     fn from(scheme: ExactSvm<A>) -> Self {
+//!         PaymentRequirements::from(Payment::from(scheme))
+//!     }
+//! }
 //! ```
 //!
 

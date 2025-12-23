@@ -8,6 +8,13 @@
 
 A fully modular, framework-agnostic, easy-to-extend SDK for building complex X402 payment integrations.
 
+## 📦 Crates
+
+| Crate                                                   | Description                                                                |
+| ------------------------------------------------------- | -------------------------------------------------------------------------- |
+| [`x402-kit`](https://crates.io/crates/x402-kit)         | Core SDK with network definitions, payment schemes, and facilitator client |
+| [`x402-paywall`](https://crates.io/crates/x402-paywall) | Framework-agnostic HTTP paywall middleware                                 |
+
 ## 📚 Developer Docs
 
 Docs are available at [docs.rs](https://docs.rs/x402-kit/latest/x402_kit/)
@@ -39,148 +46,160 @@ However, we still recommend contributing back any useful implementations to the 
 
 Minimize runtime errors through compile-time guarantees while maintaining the flexibility needed for real-world business logic.
 
-## 🧪 Axum Usage Examples
+## 🧪 Usage Examples
 
-Two runnable demos live under `crates/x402-kit/examples`. Export `FACILITATOR_URL` so the SDK can reach your facilitator before starting either server.
+### Using `x402-paywall` with Axum
 
-### 1. Premium content flow (`examples/axum_middleware.rs`, `POST /premium`)
+The `x402-paywall` crate provides a composable `PayWall` that handles the complete X402 payment flow. Run the example:
 
 ```bash
 FACILITATOR_URL=https://your-facilitator.example \
-  cargo run -p x402-kit --example axum_middleware
+  cargo run -p x402-paywall --example axum_seller
 ```
 
-`axum_middleware.rs` layers `seller::axum::PaymentHandler` in front of your handler, ensuring requests only reach your business logic once the facilitator settles payment. The middleware also injects `PaymentProcessingState` so downstream handlers can inspect what happened during verification/settlement.
+#### Standard Payment Flow
+
+The `handle_payment` method provides a complete flow: update accepts from facilitator, verify payment, run handler, and settle on success.
 
 ```rust
-async fn payment_middleware(req: Request, next: Next) -> Response {
-    PaymentHandler::builder(RemoteFacilitatorClient::new_default(
-        std::env::var("FACILITATOR_URL")
-            .expect("FACILITATOR_URL not set")
-            .parse()
-            .expect("Invalid FACILITATOR_URL"),
-    ))
-    .add_payment(
-        ExactEvm::builder()
-            .asset(UsdcBase)
-            .amount(1000)
-            .pay_to(alloy_primitives::address!(
-                "0x17d2e11d0405fa8d0ad2dca6409c499c0132c017"
-            ))
-            .resource(
-                Resource::builder()
-                    .url(url!("http://localhost:3000/premium"))
-                    .description("")
-                    .mime_type("")
+use alloy::primitives::address;
+use axum::{extract::{Request, State}, middleware::Next, response::{IntoResponse, Response}};
+use url_macro::url;
+use x402_kit::{
+    core::Resource,
+    facilitator_client::FacilitatorClient,
+    networks::evm::assets::UsdcBaseSepolia,
+    schemes::exact_evm::ExactEvm,
+};
+use x402_paywall::paywall::PayWall;
+
+async fn paywall_middleware(State(state): State<AppState>, req: Request, next: Next) -> Response {
+    let paywall = PayWall::builder()
+        .facilitator(state.facilitator)
+        .accepts(
+            ExactEvm::builder()
+                .amount(1000)
+                .asset(UsdcBaseSepolia)
+                .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
+                .build(),
+        )
+        .resource(
+            Resource::builder()
+                .url(url!("https://example.com/resource"))
+                .description("X402 payment protected resource")
+                .mime_type("application/json")
+                .build(),
+        )
+        .build();
+
+    paywall
+        .handle_payment(req, |req| next.run(req))
+        .await
+        .unwrap_or_else(|err| err.into_response())
+}
+```
+
+#### Multiple Payment Options
+
+Accept payments on multiple networks (EVM and SVM):
+
+```rust
+use x402_kit::{
+    networks::{evm::assets::UsdcBaseSepolia, svm::assets::UsdcSolanaDevnet},
+    schemes::{exact_evm::ExactEvm, exact_svm::ExactSvm},
+    transport::Accepts,
+};
+
+let paywall = PayWall::builder()
+    .facilitator(facilitator)
+    .accepts(
+        Accepts::new()
+            .push(
+                ExactEvm::builder()
+                    .amount(1000)
+                    .asset(UsdcBaseSepolia)
+                    .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
                     .build(),
             )
-            .build(),
+            .push(
+                ExactSvm::builder()
+                    .amount(1000)
+                    .asset(UsdcSolanaDevnet)
+                    .pay_to(pubkey!("Ge3jkza5KRfXvaq3GELNLh6V1pjjdEKNpEdGXJgjjKUR"))
+                    .build(),
+            ),
     )
-    .build()
-    .handle_payment()
-    .req(req)
-    .next(next)
-    .call()
-    .await
-    .map(|success| success.into_response())
-    .unwrap_or_else(|err| err.into_response())
-}
-```
-
-### 2. Seller toolkit helper (`examples/seller_toolkit.rs`, `POST /premium`)
-
-```bash
-FACILITATOR_URL=https://your-facilitator.example \
-  cargo run -p x402-kit --example seller_toolkit
-```
-
-This example shows how to call the lower-level toolkit directly from within a route. It defines a discoverable HTTP resource, builds Exact EVM payment requirements, and hands the inbound headers to `process_payment`. The response that comes back is echoed via `X-Payment-Response`, proving payment to the caller.
-
-```rust
-let resource = Resource::builder()
-    .url(url!("http://0.0.0.0:3000/premium"))
-    .description("Premium content")
-    .mime_type("application/json")
-    .output_schema(OutputSchema::discoverable_http_post())
+    .resource(/* ... */)
     .build();
+```
 
-let payment_requirements = ExactEvm::builder()
-    .asset(UsdcBase)
-    .amount(500)
-    .pay_to(alloy_primitives::address!(
-        "0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"
-    ))
-    .resource(resource)
-    .build()
-    .into();
+#### Custom Payment Flow
 
-let facilitator = RemoteFacilitatorClient::from_url(facilitator_url);
+For fine-grained control, use the step-by-step API:
 
-let result = process_payment(&facilitator, req.headers(), vec![payment_requirements])
-    .await
-    .map_err(|err| {
-        (
-            err.status,
-            Json(serde_json::to_value(err.into_payment_requirements_response()).unwrap()),
-        )
-    })?;
+```rust
+// Skip verification, settle before running handler
+let response = paywall
+    .process_request(req)?
+    .settle()
+    .await?
+    .run_handler(|req| next.run(req))
+    .await?
+    .response();
+```
 
-let mut response = (
-    StatusCode::CREATED,
-    Json(serde_json::json!({"message": "Premium content accessed"})),
-)
-    .into_response();
+#### Access Payment State in Handlers
 
-if let Some(header_value) = Base64EncodedHeader::try_from(result)
-    .ok()
-    .and_then(|encoded| encoded.to_string().parse().ok())
-{
-    response.headers_mut().insert("X-Payment-Response", header_value);
+The `PayWall` injects `PaymentState` into request extensions:
+
+```rust
+use axum::{Extension, Json};
+use x402_paywall::processor::PaymentState;
+
+async fn handler(Extension(payment_state): Extension<PaymentState>) -> Json<Value> {
+    Json(json!({
+        "message": "Premium content accessed!",
+        "payer": payment_state.verified.map(|v| v.payer),
+        "transaction": payment_state.settled.map(|s| s.transaction),
+    }))
 }
 ```
 
-### Custom facilitator headers / payloads
+### Custom Facilitator Client
 
-If your facilitator expects bespoke request/response bodies, override them via the `with_*_type` helpers while still reusing the same payment definitions and tooling:
+Customize request/response types for your facilitator.
+
+> **Note:** The default facilitator client uses `Url::join("verify")` etc. to construct endpoint URLs from the base URL. This means **trailing slashes matter**. For example, when using the Coinbase facilitator:
+>
+> ```bash
+> export FACILITATOR_URL=https://www.x402.org/facilitator/
+> ```
 
 ```rust
+use x402_kit::facilitator_client::{FacilitatorClient, IntoVerifyResponse, IntoSettleResponse};
+
 #[derive(Serialize, Deserialize)]
 struct CustomSettleRequest { /* ... */ }
-
-impl IntoVerifyResponse for DefaultVerifyResponse {
-    fn into_verify_response(self) -> FacilitatorVerifyResponse { /* ... */ }
-}
 
 #[derive(Deserialize)]
 struct CustomSettleResponse { /* ... */ }
 
 impl IntoSettleResponse for CustomSettleResponse {
-    fn into_settle_response(self) -> FacilitatorSettleResponse { /* ... */ }
+    fn into_settle_response(self) -> SettleResult { /* ... */ }
 }
 
-let facilitator = RemoteFacilitatorClient::from_url(facilitator_url)
+let facilitator = FacilitatorClient::from_url(facilitator_url)
     .with_settle_request_type::<CustomSettleRequest>()
     .with_settle_response_type::<CustomSettleResponse>();
 ```
 
-For custom HTTP headers (e.g., API keys, authentication tokens), use `with_header`:
+## 🚀 Next Steps
 
-```rust
-let facilitator = RemoteFacilitatorClient::from_url(facilitator_url)
-    .with_header("X-API-Key", "your-api-key")
-    .with_header("Authorization", "Bearer your-token");
-```
-
-With custom serialization in place you can continue calling `process_payment` (or the middleware builder) unchanged while swapping transport formats.
-
-## Next Steps
-
-- Full buyer-side signer support (very soon)
-- List more networks / assets / schemes into the ecosystem
+- Full buyer-side signer support
+- More networks / assets / schemes
 - MCP / A2A transport support
-- X402 V2 support planned
 
-## Contributing
+## 🤝 Contributing
 
 We welcome all contributions to x402-kit! Here's how you can get involved:
 
@@ -189,8 +208,3 @@ We welcome all contributions to x402-kit! Here's how you can get involved:
 - 🔧 **Submit PRs** to improve the codebase
 
 Contributors will receive **priority access** and **rewards** at AIMO Network's Beta launch (coming soon)!
-
-## Acknowledgements
-
-[x402-rs](https://github.com/x402-rs/x402-rs) for providing the first facilitator and x402 SDK in rust
-[faremeter](https://github.com/faremeter/faremeter) for inpiring some of x402-kit's API design
