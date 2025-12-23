@@ -110,12 +110,11 @@ impl<F: Facilitator> PayWall<F> {
 
     /// Update the accepted payment requirements based on the facilitator's supported kinds.
     pub async fn update_accepts(mut self) -> Result<Self, ErrorResponse> {
-        let supported = self
-            .facilitator
-            .supported()
-            .await
-            .map_err(|err| self.server_error(&err))?;
-        self.accepts = filter_supported_accepts(&supported, self.accepts.to_owned());
+        let supported = self.facilitator.supported().await.map_err(|err| {
+            self.server_error(format!("Failed to get supported payment kinds: {err}"))
+        })?;
+        let filtered = filter_supported_accepts(&supported, self.accepts.to_owned());
+        self.accepts = filtered;
 
         Ok(self)
     }
@@ -215,7 +214,11 @@ pub fn filter_supported_accepts(supported: &SupportedResponse, accepts: Accepts)
             supported
                 .kinds
                 .iter()
-                .find(|kind| kind.scheme == pr.scheme && kind.network == pr.network)
+                .find(|kind| {
+                    kind.x402_version.as_v2().is_some()
+                        && kind.scheme == pr.scheme
+                        && kind.network == pr.network
+                })
                 .map(|s| {
                     // Update extra field if present
                     if s.extra.is_some() {
@@ -225,4 +228,118 @@ pub fn filter_supported_accepts(supported: &SupportedResponse, accepts: Accepts)
                 })
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+    use x402_kit::{
+        facilitator::SupportedResponse,
+        transport::{Accepts, PaymentRequirements},
+        types::AmountValue,
+    };
+
+    use crate::paywall::filter_supported_accepts;
+
+    #[test]
+    fn test_filter_supported_accepts() {
+        let supported: SupportedResponse = serde_json::from_value(json!({
+          "kinds": [
+            {
+              "x402Version": 2,
+              "scheme": "exact",
+              "network": "eip155:84532"
+            },
+            {
+              "x402Version": 2,
+              "scheme": "exact",
+              "network": "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1",
+              "extra": {
+                "feePayer": "CKPKJWNdJEqa81x7CkZ14BVPiY6y16Sxs7owznqtWYp5"
+              }
+            },
+            {
+              "x402Version": 1,
+              "scheme": "exact",
+              "network": "base-sepolia"
+            },
+            {
+              "x402Version": 1,
+              "scheme": "exact",
+              "network": "solana-devnet",
+              "extra": {
+                "feePayer": "CKPKJWNdJEqa81x7CkZ14BVPiY6y16Sxs7owznqtWYp5"
+              }
+            }
+          ],
+          "extensions": [],
+          "signers": {
+            "eip155:*": [
+              "0xd407e409E34E0b9afb99EcCeb609bDbcD5e7f1bf"
+            ],
+            "solana:*": [
+              "CKPKJWNdJEqa81x7CkZ14BVPiY6y16Sxs7owznqtWYp5"
+            ]
+          }
+        }))
+        .unwrap();
+
+        let accepts = Accepts::from(vec![
+            PaymentRequirements {
+                scheme: "exact".to_string(),
+                network: "eip155:84532".to_string(),
+                amount: AmountValue(1000),
+                asset: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48".to_string(),
+                pay_to: "0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20".to_string(),
+                max_timeout_seconds: 60,
+                extra: Some(json!({
+                    "name": "USD Coin",
+                    "version": "2"
+                })),
+            },
+            PaymentRequirements {
+                scheme: "exact".to_string(),
+                network: "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1".to_string(),
+                amount: AmountValue(2000000),
+                asset: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v".to_string(),
+                pay_to: "Ge3jkza5KRfXvaq3GELNLh6V1pjjdEKNpEdGXJgjjKUR".to_string(),
+                max_timeout_seconds: 60,
+                extra: None,
+            },
+            PaymentRequirements {
+                scheme: "exact".to_string(),
+                network: "solana:UnknownNetwork".to_string(),
+                amount: AmountValue(2000000),
+                asset: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v".to_string(),
+                pay_to: "Ge3jkza5KRfXvaq3GELNLh6V1pjjdEKNpEdGXJgjjKUR".to_string(),
+                max_timeout_seconds: 60,
+                extra: None,
+            },
+        ]);
+
+        let updated = filter_supported_accepts(&supported, accepts);
+
+        assert_eq!(
+            updated.as_ref().len(),
+            2,
+            "Only 2 payment requirements should be supported"
+        );
+
+        assert_eq!(
+            updated.as_ref()[0].extra,
+            Some(json!({
+                "name": "USD Coin",
+                "version": "2"
+            })),
+            "EVM payment requirement should retain extra"
+        );
+
+        assert_eq!(
+            updated.as_ref()[1].extra,
+            Some(json!({
+                "feePayer": "CKPKJWNdJEqa81x7CkZ14BVPiY6y16Sxs7owznqtWYp5"
+            })),
+            "Solana payment requirement should have updated extra from supported kinds"
+        );
+    }
 }

@@ -74,6 +74,66 @@ impl Display for X402V2 {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum X402Version {
+    V1(X402V1),
+    V2(X402V2),
+}
+
+impl Serialize for X402Version {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            X402Version::V1(v) => v.serialize(serializer),
+            X402Version::V2(v) => v.serialize(serializer),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for X402Version {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let v = i8::deserialize(deserializer)?;
+        match v {
+            1 => Ok(X402Version::V1(X402V1)),
+            2 => Ok(X402Version::V2(X402V2)),
+            _ => Err(serde::de::Error::custom(format!(
+                "Unsupported X402 version {}; expected 1 or 2",
+                v
+            ))),
+        }
+    }
+}
+
+impl Display for X402Version {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            X402Version::V1(v) => write!(f, "{}", v),
+            X402Version::V2(v) => write!(f, "{}", v),
+        }
+    }
+}
+
+impl X402Version {
+    pub fn as_v1(&self) -> Option<X402V1> {
+        match self {
+            X402Version::V1(v) => Some(*v),
+            _ => None,
+        }
+    }
+
+    pub fn as_v2(&self) -> Option<X402V2> {
+        match self {
+            X402Version::V2(v) => Some(*v),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Base64EncodedHeader(pub String);
 
@@ -100,10 +160,4 @@ impl Display for Base64EncodedHeader {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Extension {
-    pub info: AnyJson,
-    pub schema: AnyJson,
 }

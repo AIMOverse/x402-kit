@@ -236,8 +236,8 @@ pub enum FacilitatorClientError {
     UrlParseError(#[from] url::ParseError),
     #[error("HTTP request error: {0}")]
     HttpRequestError(#[from] reqwest::Error),
-    #[error("Serialization/Deserialization error: {0}")]
-    SerdeError(#[from] serde_json::Error),
+    #[error("JSON Serialization/Deserialization error: {0}")]
+    SerdeJsonError(#[from] serde_json::Error),
 }
 
 impl<VReq, VRes, SReq, SRes> Facilitator for FacilitatorClient<VReq, VRes, SReq, SRes>

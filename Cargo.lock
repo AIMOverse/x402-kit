@@ -4534,6 +4534,7 @@ dependencies = [
  "futures-util",
  "http",
  "serde_json",
+ "solana-pubkey",
  "tokio",
  "tower-http",
  "tracing",

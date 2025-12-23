@@ -25,12 +25,12 @@ impl ErrorResponseHeader {
             ErrorResponseHeader::PaymentRequired(Base64EncodedHeader(s)) => {
                 HeaderValue::from_str(&s)
                     .ok()
-                    .map(|v| (HeaderName::from_static("PAYMENT-REQUIRED"), v))
+                    .map(|v| (HeaderName::from_static("payment-required"), v))
             }
             ErrorResponseHeader::PaymentResponse(Base64EncodedHeader(s)) => {
                 HeaderValue::from_str(&s)
                     .ok()
-                    .map(|v| (HeaderName::from_static("PAYMENT-RESPONSE"), v))
+                    .map(|v| (HeaderName::from_static("payment-response"), v))
             }
         }
     }

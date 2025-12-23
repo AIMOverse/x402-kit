@@ -2,16 +2,16 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     transport::{PaymentPayload, PaymentRequirements, SettlementResponse},
-    types::{AnyJson, Extension, Record, X402V2},
+    types::{AnyJson, ExtensionIdentifier, Record, X402Version},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PaymentRequest {
     pub payment_payload: PaymentPayload,
     pub payment_requirements: PaymentRequirements,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum VerifyResult {
     Valid(VerifyValid),
     Invalid(VerifyInvalid),
@@ -45,18 +45,18 @@ impl VerifyResult {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerifyValid {
     pub payer: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerifyInvalid {
     pub invalid_reason: String,
     pub payer: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SettleResult {
     Success(SettleSuccess),
     Failed(SettleFailed),
@@ -90,14 +90,14 @@ impl SettleResult {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SettleSuccess {
     pub payer: String,
     pub transaction: String,
     pub network: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SettleFailed {
     pub error_reason: String,
     pub payer: Option<String>,
@@ -106,7 +106,7 @@ pub struct SettleFailed {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SupportedKinds {
-    pub x402_version: X402V2,
+    pub x402_version: X402Version,
     pub scheme: String,
     pub network: String,
     pub extra: Option<AnyJson>,
@@ -119,7 +119,7 @@ pub struct SupportedResponse {
 
     // TODO: implement stronger typings for extensions
     /// Array of extension identifiers the facilitator has implemented
-    pub extensions: Record<Extension>,
+    pub extensions: Vec<ExtensionIdentifier>,
     /// Map of CAIP-2 patterns (e.g., eip155:*) to public signer addresses
     pub signers: Record<Vec<String>>,
 }
