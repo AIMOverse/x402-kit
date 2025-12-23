@@ -15,10 +15,10 @@ use x402_kit::{
     core::Resource,
     facilitator_client::{FacilitatorClient, StandardFacilitatorClient},
     networks::{evm::assets::UsdcBaseSepolia, svm::assets::UsdcSolanaDevnet},
+    paywall::{errors::ErrorResponse, paywall::PayWall, processor::PaymentState},
     schemes::{exact_evm::ExactEvm, exact_svm::ExactSvm},
     transport::Accepts,
 };
-use x402_paywall::{errors::ErrorResponse, paywall::PayWall, processor::PaymentState};
 
 #[derive(Clone)]
 struct PayWallState {

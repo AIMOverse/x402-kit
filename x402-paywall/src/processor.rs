@@ -1,5 +1,5 @@
 use http::{HeaderValue, Request, Response};
-use x402_kit::{
+use x402_core::{
     facilitator::{
         Facilitator, PaymentRequest, SettleResult, SettleSuccess, VerifyResult, VerifyValid,
     },
@@ -17,9 +17,9 @@ use crate::{errors::ErrorResponse, paywall::PayWall};
 /// # Example
 ///
 /// ```rust
-/// use axum::{extract::{Extension, Request}, Json, response::Response};
+/// use axum::{extract::Extension, Json};
 /// use serde_json::{json, Value};
-/// use x402_kit::facilitator::{VerifyValid, SettleSuccess};
+/// use x402_core::facilitator::{VerifyValid, SettleSuccess};
 /// use x402_paywall::processor::PaymentState;
 ///
 /// async fn example_handler(Extension(payment_state): Extension<PaymentState>) -> Json<Value> {

@@ -13,21 +13,9 @@ tracing = ["dep:tracing"]
 axum = ["dep:axum"]
 
 [dependencies]
-x402-kit = { version = "2.1", path = "../x402-kit", default-features = false }
+x402-core = { path = "../x402-core" }
 http = { version = "1.4" }
 bon = { version = "3.8" }
 tracing = { version = "0.1", optional = true }
 serde_json = { version = "1.0" }
 axum = { version = "0.8", optional = true }
-
-[dev-dependencies]
-url = { version = "2.5" }
-url-macro = { version = "0.2" }
-tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-axum = { version = "0.8" }
-tracing-subscriber = { version = "0.3" }
-alloy = { version = "1" }
-x402-kit = { path = "../x402-kit" }
-tower-http = { version = "0.6", features = ["trace"] }
-futures-util = { version = "0.3" }
-solana-pubkey = { version = "4" }
