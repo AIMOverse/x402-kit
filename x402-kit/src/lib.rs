@@ -7,8 +7,97 @@
 //!
 //! ## Related Crates
 //!
-//! - **[`x402-paywall`](https://docs.rs/x402-paywall)**: A framework-agnostic HTTP paywall middleware
+//! - **[`x402_core`]**: Core traits, types, and transport mechanisms
+//!   for the X402 protocol. This crate provides the foundational building blocks that `x402-kit` builds upon.
+//! - **[`x402_paywall`]**: A framework-agnostic HTTP paywall middleware
 //!   built on top of `x402-kit`. Use it to protect HTTP resources with X402 payments.
+//!
+//! ## Quick Start
+//!
+//! ```
+//! use alloy::primitives::address;
+//! use axum::{
+//!     extract::{Request, State},
+//!     middleware::{from_fn_with_state, Next},
+//!     response::{IntoResponse, Response},
+//!     routing::post,
+//!     Router,
+//! };
+//! use url_macro::url;
+//! use x402_kit::{
+//!     core::Resource,
+//!     facilitator_client::{FacilitatorClient, StandardFacilitatorClient},
+//!     networks::evm::assets::UsdcBaseSepolia,
+//!     paywall::paywall::PayWall,
+//!     schemes::exact_evm::ExactEvm,
+//! };
+//!
+//!
+//! #[derive(Clone)]
+//! struct PayWallState {
+//!     facilitator: StandardFacilitatorClient,
+//! }
+//!
+//! let facilitator = FacilitatorClient::from_url(url!("https://facilitator.example.com"));
+//!
+//! async fn paywall_middleware(State(state): State<PayWallState>, req: Request, next: Next) -> Response {
+//!     let paywall = PayWall::builder()
+//!         .facilitator(state.facilitator)
+//!         .accepts(
+//!             ExactEvm::builder()
+//!                 .amount(1000)
+//!                 .asset(UsdcBaseSepolia)
+//!                 .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
+//!                 .build(),
+//!         )
+//!         .resource(
+//!             Resource::builder()
+//!                 .url(url!("https://example.com/resource"))
+//!                 .description("Protected resource")
+//!                 .mime_type("application/json")
+//!                 .build(),
+//!         )
+//!         .build();
+//!
+//!     paywall
+//!         .handle_payment(req, |req| next.run(req))
+//!         .await
+//!         .unwrap_or_else(|err| err.into_response())
+//! }
+//! ```
+//!
+//! See [`examples/axum_seller.rs`](https://github.com/AIMOverse/x402-kit/blob/main/x402-kit/examples/axum_seller.rs)
+//! for a complete working example.
+//!
+//! ## Accepting Multiple Payment Methods
+//!
+//! You can accept payments from multiple networks (e.g., EVM and SVM) using [`transport::Accepts`]:
+//!
+//! ```
+//! use alloy::primitives::address;
+//! use solana_pubkey::pubkey;
+//! use x402_kit::{
+//!     networks::{evm::assets::UsdcBaseSepolia, svm::assets::UsdcSolanaDevnet},
+//!     schemes::{exact_evm::ExactEvm, exact_svm::ExactSvm},
+//!     transport::Accepts,
+//! };
+//!
+//! let accepts = Accepts::new()
+//!     .push(
+//!         ExactEvm::builder()
+//!             .amount(1000)
+//!             .asset(UsdcBaseSepolia)
+//!             .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
+//!             .build(),
+//!     )
+//!     .push(
+//!         ExactSvm::builder()
+//!             .amount(1000)
+//!             .asset(UsdcSolanaDevnet)
+//!             .pay_to(pubkey!("Ge3jkza5KRfXvaq3GELNLh6V1pjjdEKNpEdGXJgjjKUR"))
+//!             .build(),
+//!     );
+//! ```
 //!
 //! ## Core Components Overview
 //!
@@ -150,7 +239,7 @@
 //!
 //! Once you've defined your custom asset, you can use it with payment schemes just like built-in assets:
 //!
-//! ```no_run
+//! ```
 //! use alloy_primitives::address;
 //! use x402_kit::{
 //!     networks::evm::{ExplicitEvmAsset, ExplicitEvmNetwork, EvmNetwork, EvmAsset, EvmAddress, Eip712Domain},
@@ -343,28 +432,41 @@
 //! ```
 //!
 
+/// Core components for the X402 protocol.
 pub mod core {
     pub use x402_core::core::*;
 }
 
+/// Transport mechanisms and facilitator interactions.
 pub mod transport {
     pub use x402_core::transport::*;
 }
 
+/// Common types used across the X402 protocol.
 pub mod types {
     pub use x402_core::types::*;
 }
 
+/// Facilitator traits and types.
 pub mod facilitator {
     pub use x402_core::facilitator::*;
 }
 
+/// Errors used across X402 Kit.
 pub mod errors {
     pub use x402_core::errors::*;
 }
 
-pub mod networks;
-pub mod schemes;
+/// X402 Paywall middleware for protecting HTTP resources.
+#[cfg(feature = "paywall")]
+pub mod paywall {
+    pub use x402_paywall::*;
+}
 
+/// Facilitator client utilities.
 #[cfg(feature = "facilitator-client")]
 pub mod facilitator_client;
+/// Network-specific implementations.
+pub mod networks;
+/// Payment scheme implementations.
+pub mod schemes;

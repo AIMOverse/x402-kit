@@ -2,43 +2,9 @@
 //!
 //! A framework-agnostic HTTP paywall implementation for the X402 payment protocol.
 //!
-//! This crate provides [`PayWall`](paywall::PayWall), a composable middleware that protects
+//! This crate provides [`paywall::PayWall`], a composable middleware that protects
 //! HTTP resources with X402 payments. It handles the complete payment lifecycle including
 //! verification and settlement through a configured facilitator.
-//!
-//! ## Quick Start
-//!
-//! ```rust
-//! use alloy::primitives::address;
-//! use url_macro::url;
-//! use x402_kit::{
-//!     core::Resource,
-//!     facilitator_client::FacilitatorClient,
-//!     networks::evm::assets::UsdcBaseSepolia,
-//!     schemes::exact_evm::ExactEvm,
-//! };
-//! use x402_paywall::paywall::PayWall;
-//!
-//! let facilitator = FacilitatorClient::from_url(url!("https://facilitator.example.com"));
-//!
-//! let paywall = PayWall::builder()
-//!     .facilitator(facilitator)
-//!     .accepts(
-//!         ExactEvm::builder()
-//!             .amount(1000)
-//!             .asset(UsdcBaseSepolia)
-//!             .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
-//!             .build(),
-//!     )
-//!     .resource(
-//!         Resource::builder()
-//!             .url(url!("https://example.com/resource"))
-//!             .description("Protected resource")
-//!             .mime_type("application/json")
-//!             .build(),
-//!     )
-//!     .build();
-//! ```
 //!
 //! ## Modules
 //!
@@ -62,37 +28,8 @@
 //! ## Framework Integration
 //!
 //! While framework-agnostic, `x402-paywall` works seamlessly with any HTTP framework.
-//! Here's an example with Axum:
-//!
-//! ```rust,ignore
-//! use axum::{
-//!     extract::{Request, State},
-//!     middleware::{from_fn_with_state, Next},
-//!     response::{IntoResponse, Response},
-//!     routing::post,
-//!     Router,
-//! };
-//!
-//! async fn paywall_middleware(
-//!     State(state): State<AppState>,
-//!     req: Request,
-//!     next: Next,
-//! ) -> Response {
-//!     let paywall = PayWall::builder()
-//!         .facilitator(state.facilitator)
-//!         .accepts(/* payment requirements */)
-//!         .resource(/* resource config */)
-//!         .build();
-//!
-//!     paywall
-//!         .handle_payment(req, |req| next.run(req))
-//!         .await
-//!         .unwrap_or_else(|err| err.into_response())
-//! }
-//!
-//! let app = Router::new()
-//!     .route("/protected", post(handler).layer(from_fn_with_state(state, paywall_middleware)));
-//! ```
+//! See the [`x402-kit` documentation](https://docs.rs/x402-kit) for complete usage examples
+//! with Axum and other frameworks.
 //!
 //! ## Error Handling
 //!

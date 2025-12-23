@@ -8,12 +8,12 @@ license = "MIT"
 description = "A fully modular SDK for building complex X402 payment integrations."
 
 [features]
-default = ["facilitator-client", "evm-signer", "svm-signer", "paywall"]
+default = ["facilitator-client", "evm-signer", "svm-signer", "axum"]
 facilitator-client = ["dep:reqwest", "dep:http"]
 evm-signer = ["dep:alloy-core", "dep:alloy-signer", "dep:rand"]
 svm-signer = ["dep:bincode"]
 paywall = ["dep:x402-paywall"]
-axum = ["dep:x402-paywall", "x402-paywall/axum"]
+axum = ["paywall", "x402-paywall/axum"]
 
 [dependencies]
 # === Core Deps ===
