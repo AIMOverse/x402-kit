@@ -23,7 +23,7 @@ impl<A: ExplicitSvmAsset> From<ExactSvm<A>> for Payment<ExactSvmScheme, SvmAddre
             pay_to: scheme.pay_to,
             asset: A::ASSET,
             amount: scheme.amount.into(),
-            max_timeout_seconds: scheme.max_timeout_seconds_override.unwrap_or(60),
+            max_timeout_seconds: scheme.max_timeout_seconds_override.unwrap_or(300),
             extra: None,
         }
     }

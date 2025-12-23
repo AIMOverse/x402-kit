@@ -146,7 +146,7 @@ impl<A: ExplicitEvmAsset> From<ExactEvm<A>> for Payment<ExactEvmScheme, EvmAddre
             pay_to: scheme.pay_to,
             asset: A::ASSET,
             amount: scheme.amount.into(),
-            max_timeout_seconds: scheme.max_timeout_seconds_override.unwrap_or(60),
+            max_timeout_seconds: scheme.max_timeout_seconds_override.unwrap_or(300),
             extra: scheme
                 .extra_override
                 .or(A::EIP712_DOMAIN.and_then(|v| serde_json::to_value(v).ok())),
