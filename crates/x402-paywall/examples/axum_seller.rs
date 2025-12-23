@@ -1,6 +1,6 @@
 use alloy::primitives::address;
 use axum::{
-    Json, Router,
+    Extension, Json, Router,
     extract::{Request, State},
     middleware::{Next, from_fn_with_state},
     response::{IntoResponse, Response},
@@ -16,15 +16,15 @@ use x402_kit::{
     networks::evm::assets::UsdcBase,
     schemes::exact_evm::ExactEvm,
 };
-use x402_paywall::paywall::PayWall;
+use x402_paywall::{errors::ErrorResponse, paywall::PayWall, processor::PaymentState};
 
 #[derive(Clone)]
 struct PayWallState {
     facilitator: StandardFacilitatorClient,
 }
 
-async fn paywall(State(state): State<PayWallState>, req: Request, next: Next) -> Response {
-    PayWall::builder()
+async fn standard_paywall(State(state): State<PayWallState>, req: Request, next: Next) -> Response {
+    let paywall = PayWall::builder()
         .facilitator(state.facilitator)
         .accepts(
             ExactEvm::builder()
@@ -35,15 +35,65 @@ async fn paywall(State(state): State<PayWallState>, req: Request, next: Next) ->
         )
         .resource(
             Resource::builder()
-                .url(url!("https://example.com/resource"))
+                .url(url!("https://example.com/resource/standard"))
                 .description("X402 payment protected resource")
                 .mime_type("application/json")
                 .build(),
         )
-        .build()
+        .build();
+
+    // Run the paywall
+    paywall
         .handle_payment(req, |req| next.run(req))
         .await
         .unwrap_or_else(|err| err.into_response())
+}
+
+async fn custom_paywall(
+    State(state): State<PayWallState>,
+    req: Request,
+    next: Next,
+) -> Result<Response, ErrorResponse> {
+    let paywall = PayWall::builder()
+        .facilitator(state.facilitator)
+        .accepts(
+            ExactEvm::builder()
+                .amount(1000)
+                .asset(UsdcBase)
+                .pay_to(address!("0x3CB9B3bBfde8501f411bB69Ad3DC07908ED0dE20"))
+                .build(),
+        )
+        .resource(
+            Resource::builder()
+                .url(url!("https://example.com/resource/custom"))
+                .description("X402 payment protected resource")
+                .mime_type("application/json")
+                .build(),
+        )
+        .build();
+
+    // Run the paywall
+    let response = paywall
+        .update_accepts()
+        .await?
+        .process_request(req)?
+        .settle()
+        .await?
+        .run_handler(|req| next.run(req))
+        .await?
+        .response();
+
+    Ok(response)
+}
+
+/// Example handler for a protected resource.
+///
+/// The `PayWall` middleware will inject the `PaymentState` into the request extensions.
+async fn example_handler(Extension(payment_state): Extension<PaymentState>) -> Json<Value> {
+    Json(json!({
+        "message": "You have accessed a protected resource!",
+        "payer": payment_state.verified.map(|v| v.payer),
+    }))
 }
 
 #[tokio::main]
@@ -61,7 +111,7 @@ async fn main() {
     let app = Router::new()
         .route(
             "/resource",
-            post(example_handler).layer(from_fn_with_state(state, paywall)),
+            post(example_handler).layer(from_fn_with_state(state, standard_paywall)),
         )
         .layer(TraceLayer::new_for_http());
 
@@ -78,10 +128,4 @@ async fn main() {
 
     tracing::info!("Server running at http://{}", addr);
     axum::serve(listener, app).await.expect("Server failed");
-}
-
-async fn example_handler() -> Json<Value> {
-    Json(json!({
-        "message": "You have accessed a protected resource!"
-    }))
 }

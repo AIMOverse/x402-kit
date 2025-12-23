@@ -2,12 +2,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     transport::{PaymentPayload, PaymentRequirements, SettlementResponse},
-    types::{AnyJson, Base64EncodedHeader, Extension, Record, X402V2},
+    types::{AnyJson, Extension, Record, X402V2},
 };
 
 #[derive(Debug, Clone)]
 pub struct PaymentRequest {
-    pub payment_signature: Base64EncodedHeader,
     pub payment_payload: PaymentPayload,
     pub payment_requirements: PaymentRequirements,
 }
