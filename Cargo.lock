@@ -4501,6 +4501,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "x402-core"
+version = "0.1.0"
+
+[[package]]
 name = "x402-kit"
 version = "2.1.0"
 dependencies = [
