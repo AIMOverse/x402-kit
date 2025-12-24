@@ -43,7 +43,7 @@ bincode = { version = "2.0", features = ["serde"], optional = true }
 http = { version = "1.4", optional = true }
 
 # === Feature "paywall" ===
-x402-paywall = { path = "../x402-paywall", optional = true, default-features = false }
+x402-paywall = { version = "2.2", path = "../x402-paywall", optional = true, default-features = false }
 
 [dev-dependencies]
 alloy = { version = "1" }
