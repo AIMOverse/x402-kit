@@ -4502,7 +4502,7 @@ dependencies = [
 
 [[package]]
 name = "x402-core"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "base64",
  "bon",
