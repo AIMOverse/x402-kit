@@ -5,16 +5,16 @@
 use std::fmt::Display;
 
 use bon::Builder;
-use http::{Request, Response, StatusCode};
+use http::{Request, Response};
 use x402_core::{
     core::Resource,
     facilitator::{Facilitator, SupportedResponse},
-    transport::{Accepts, PaymentPayload, PaymentRequired},
-    types::{Base64EncodedHeader, Extension, Record, X402V2},
+    transport::{Accepts, PaymentPayload},
+    types::{Base64EncodedHeader, Extension, Record},
 };
 
 use crate::{
-    errors::{ErrorResponse, ErrorResponseHeader},
+    errors::ErrorResponse,
     processor::{PaymentState, RequestProcessor},
 };
 
@@ -163,86 +163,41 @@ impl<F: Facilitator> PayWall<F> {
 
     /// Payment needed to access resource
     pub fn payment_required(&self) -> ErrorResponse {
-        let payment_required = PaymentRequired {
-            x402_version: X402V2,
-            error: "PAYMENT-SIGNATURE header is required".to_string(),
-            resource: self.resource.to_owned().into(),
-            accepts: self.accepts.to_owned(),
-            extensions: self.extensions.to_owned(),
-        };
-
-        let header = Base64EncodedHeader::try_from(payment_required.clone()).unwrap_or(
-            Base64EncodedHeader("Failed to encode base64 PaymentRequired payload".to_string()),
-        );
-
-        ErrorResponse {
-            status: StatusCode::PAYMENT_REQUIRED,
-            header: ErrorResponseHeader::PaymentRequired(header),
-            body: Box::new(payment_required),
-        }
+        ErrorResponse::payment_required(
+            self.resource.to_owned().into(),
+            self.accepts.to_owned(),
+            self.extensions.to_owned(),
+        )
     }
 
     /// Malformed payment payload or requirements
     pub fn invalid_payment(&self, reason: impl Display) -> ErrorResponse {
-        let payment_required = PaymentRequired {
-            x402_version: X402V2,
-            error: reason.to_string(),
-            resource: self.resource.to_owned().into(),
-            accepts: self.accepts.to_owned(),
-            extensions: self.extensions.to_owned(),
-        };
-
-        let header = Base64EncodedHeader::try_from(payment_required.clone()).unwrap_or(
-            Base64EncodedHeader("Failed to encode base64 PaymentRequired payload".to_string()),
-        );
-
-        ErrorResponse {
-            status: StatusCode::BAD_REQUEST,
-            header: ErrorResponseHeader::PaymentResponse(header),
-            body: Box::new(payment_required),
-        }
+        ErrorResponse::invalid_payment(
+            reason,
+            self.resource.to_owned().into(),
+            self.accepts.to_owned(),
+            self.extensions.to_owned(),
+        )
     }
 
     /// Payment verification or settlement failed
     pub fn payment_failed(&self, reason: impl Display) -> ErrorResponse {
-        let payment_required = PaymentRequired {
-            x402_version: X402V2,
-            error: reason.to_string(),
-            resource: self.resource.to_owned().into(),
-            accepts: self.accepts.to_owned(),
-            extensions: self.extensions.to_owned(),
-        };
-
-        let header = Base64EncodedHeader::try_from(payment_required.clone()).unwrap_or(
-            Base64EncodedHeader("Failed to encode base64 PaymentRequired payload".to_string()),
-        );
-
-        ErrorResponse {
-            status: StatusCode::PAYMENT_REQUIRED,
-            header: ErrorResponseHeader::PaymentResponse(header),
-            body: Box::new(payment_required),
-        }
+        ErrorResponse::payment_failed(
+            reason,
+            self.resource.to_owned().into(),
+            self.accepts.to_owned(),
+            self.extensions.to_owned(),
+        )
     }
 
     /// Internal server error during payment processing
     pub fn server_error(&self, reason: impl Display) -> ErrorResponse {
-        let payment_required = PaymentRequired {
-            x402_version: X402V2,
-            error: reason.to_string(),
-            resource: self.resource.to_owned().into(),
-            accepts: self.accepts.to_owned(),
-            extensions: self.extensions.to_owned(),
-        };
-
-        let header = Base64EncodedHeader::try_from(payment_required.clone()).unwrap_or(
-            Base64EncodedHeader("Failed to encode base64 PaymentRequired payload".to_string()),
-        );
-
-        ErrorResponse {
-            status: StatusCode::INTERNAL_SERVER_ERROR,
-            header: ErrorResponseHeader::PaymentResponse(header),
-            body: Box::new(payment_required),
-        }
+        ErrorResponse::server_error(
+            reason,
+            self.resource.to_owned().into(),
+            self.accepts.to_owned(),
+            self.extensions.to_owned(),
+        )
     }
 }
 
