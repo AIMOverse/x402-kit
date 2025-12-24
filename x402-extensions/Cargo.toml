@@ -2,5 +2,9 @@
 name = "x402-extensions"
 version = "0.1.0"
 edition = "2024"
+repository = "https://github.com/AIMOverse/x402-kit"
+authors = ["Archer <archer@aimo.network>"]
+license = "MIT"
+description = "(V2 Supported) A fully modular SDK for building complex X402 payment integrations."
 
 [dependencies]

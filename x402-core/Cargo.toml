@@ -5,7 +5,7 @@ edition = "2024"
 repository = "https://github.com/AIMOverse/x402-kit"
 authors = ["Archer <archer@aimo.network>"]
 license = "MIT"
-description = "A fully modular SDK for building complex X402 payment integrations."
+description = "(V2 Supported) A fully modular SDK for building complex X402 payment integrations."
 
 [dependencies]
 bon = { version = "3.8" }
