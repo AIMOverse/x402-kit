@@ -4518,7 +4518,7 @@ version = "0.1.0"
 
 [[package]]
 name = "x402-kit"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "alloy",
  "alloy-core",
