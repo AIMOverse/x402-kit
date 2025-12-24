@@ -1,6 +1,6 @@
 [package]
 name = "x402-kit"
-version = "2.2.0"
+version = "2.2.1"
 edition = "2024"
 repository = "https://github.com/AIMOverse/x402-kit"
 authors = ["Archer <archer@aimo.network>"]
@@ -17,7 +17,7 @@ axum = ["paywall", "x402-paywall/axum"]
 
 [dependencies]
 # === Core Deps ===
-x402-core = { version = "2.2.0", path = "../x402-core" }
+x402-core = { version = "2.2.1", path = "../x402-core" }
 hex = { version = "0.4" }
 alloy-primitives = { version = "1.4" }
 bon = { version = "3.8" }
@@ -43,7 +43,7 @@ bincode = { version = "2.0", features = ["serde"], optional = true }
 http = { version = "1.4", optional = true }
 
 # === Feature "paywall" ===
-x402-paywall = { version = "2.2.0", path = "../x402-paywall", optional = true, default-features = false }
+x402-paywall = { version = "2.2.1", path = "../x402-paywall", optional = true, default-features = false }
 
 [dev-dependencies]
 alloy = { version = "1" }
