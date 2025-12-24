@@ -1,7 +1,14 @@
+//! [`AmountValue`] represents a monetary amount in the X402 protocol.
+//!
+//! This module holds its type definition and implementations.
+
 use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
 
+/// Represents a monetary amount in the X402 protocol.
+///
+/// Uses a `u128` internally to support large values.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct AmountValue(pub u128);
 

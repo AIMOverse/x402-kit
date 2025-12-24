@@ -1,3 +1,5 @@
+//! X402 payment facilitator interface and types.
+
 use serde::{Deserialize, Serialize};
 
 use crate::{

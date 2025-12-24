@@ -37,13 +37,19 @@ pub trait Scheme {
 /// Represents an asset on a given address.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Asset<A: Address> {
+    /// The address of the asset.
     pub address: A,
+    /// The number of decimals the asset uses.
     pub decimals: u8,
+    /// The name of the asset.
     pub name: &'static str,
+    /// The symbol of the asset.
     pub symbol: &'static str,
 }
 
 /// Payment configuration for a given scheme and transport.
+///
+/// The payment configuration uses a static asset implementation. See [`Asset`].
 #[derive(Builder)]
 pub struct Payment<S, A>
 where
@@ -94,9 +100,13 @@ pub struct PaymentSelection<A: Address> {
 
 /// Signer for a given payment scheme.
 pub trait SchemeSigner<A: Address<Network = <Self::Scheme as Scheme>::Network>> {
+    /// The payment scheme this signer supports.
     type Scheme: Scheme;
+
+    /// The error type for signing failures.
     type Error: std::error::Error;
 
+    /// Sign the given payment selection, producing a payload.
     fn sign(
         &self,
         payment: &PaymentSelection<A>,

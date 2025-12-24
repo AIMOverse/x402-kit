@@ -1,3 +1,7 @@
+//! This module defines types related to the schema definitions for inputs and outputs in the X402 protocol.
+//!
+//! After supporting the [Bazaar](https://docs.cdp.coinbase.com/x402/bazaar) extension, we will move the module there.
+
 use bon::Builder;
 use serde::{Deserialize, Serialize};
 

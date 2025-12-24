@@ -1,3 +1,5 @@
+//! X402 transport types and serialization.
+
 use std::fmt::Debug;
 
 use base64::{Engine, prelude::BASE64_STANDARD};

@@ -1,14 +1,66 @@
+//! Miscellaneous common types used throughout the X402 codebase.
+
 use std::fmt::{Debug, Display};
 
 use serde::{Deserialize, Serialize};
 
+/// Represents an key-value pair in the X402 protocol. The key is a `String`.
 pub type Record<V> = std::collections::HashMap<String, V>;
 
+/// Represents any JSON value. Used for serializing/deserializing arbitrary JSON data.
 pub type AnyJson = serde_json::Value;
 
+/// Represents the X402 protocol version 1. Any type's specific to version 1 can use this struct for its `x402Version` field.
+///
+/// ```
+/// use serde::{Serialize, Deserialize};
+/// use x402_core::types::X402V1;
+///
+/// #[derive(Debug, Clone, Serialize, Deserialize)]
+/// #[serde(rename_all = "camelCase")]
+/// struct ExampleV1 {
+///     x402_version: X402V1,
+///     // other fields...
+/// }
+///
+/// let example: ExampleV1 = serde_json::from_value(serde_json::json!({
+///     "x402Version": 1,
+///     // other fields...
+/// })).unwrap();
+///
+/// assert_eq!(example.x402_version, X402V1);
+///
+/// let json = serde_json::to_value(&example).unwrap();
+/// assert_eq!(json.get("x402Version").unwrap(), &serde_json::json!(1));
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct X402V1;
 
+/// Represents the X402 protocol version 2.
+///
+/// Any type's specific to version 2 can use this struct for its `x402Version` field.
+///
+/// ```
+/// use serde::{Serialize, Deserialize};
+/// use x402_core::types::X402V2;
+///
+/// #[derive(Debug, Clone, Serialize, Deserialize)]
+/// #[serde(rename_all = "camelCase")]
+/// struct ExampleV2 {
+///     x402_version: X402V2,
+///     // other fields...
+/// }
+///
+/// let example: ExampleV2 = serde_json::from_value(serde_json::json!({
+///     "x402Version": 2,
+///     // other fields...
+/// })).unwrap();
+///
+/// assert_eq!(example.x402_version, X402V2);
+///
+/// let json = serde_json::to_value(&example).unwrap();
+/// assert_eq!(json.get("x402Version").unwrap(), &serde_json::json!(2));
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct X402V2;
 
@@ -74,9 +126,40 @@ impl Display for X402V2 {
     }
 }
 
-#[derive(Debug, Clone)]
+/// Represents the X402 protocol version, either v1 or v2.
+///
+/// ```
+/// use serde::{Serialize, Deserialize};
+/// use x402_core::types::{X402Version, X402V1, X402V2};
+/// #[derive(Debug, Clone, Serialize, Deserialize)]
+/// #[serde(rename_all = "camelCase")]
+/// struct Example {
+///     x402_version: X402Version,
+///     // other fields...
+/// }
+/// let example_v1: Example = serde_json::from_value(serde_json::json!({
+///     "x402Version": 1,
+///     // other fields...
+/// })).unwrap();
+/// assert!(example_v1.x402_version.as_v1().is_some());
+///
+/// let json_v1 = serde_json::to_value(&example_v1).unwrap();
+/// assert_eq!(json_v1.get("x402Version").unwrap(), &serde_json::json!(1));
+///
+/// let example_v2: Example = serde_json::from_value(serde_json::json!({
+///     "x402Version": 2,
+///     // other fields...
+/// })).unwrap();
+/// assert!(example_v2.x402_version.as_v2().is_some());
+///
+/// let json_v2 = serde_json::to_value(&example_v2).unwrap();
+/// assert_eq!(json_v2.get("x402Version").unwrap(), &serde_json::json!(2));
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum X402Version {
+    /// Version 1 of the X402 protocol: `"x402Version": 1`.
     V1(X402V1),
+    /// Version 2 of the X402 protocol. `"x402Version": 2`.
     V2(X402V2),
 }
 
@@ -134,6 +217,7 @@ impl X402Version {
     }
 }
 
+/// Represents a base64-encoded header value for X402 protocol headers.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Base64EncodedHeader(pub String);
 
