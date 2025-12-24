@@ -12,7 +12,8 @@ A fully modular, framework-agnostic, easy-to-extend SDK for building complex X40
 
 | Crate                                                   | Description                                                                |
 | ------------------------------------------------------- | -------------------------------------------------------------------------- |
-| [`x402-kit`](https://crates.io/crates/x402-kit)         | Core SDK with network definitions, payment schemes, and facilitator client |
+| [`x402-kit`](https://crates.io/crates/x402-kit)         | Main SDK with network definitions, payment schemes, and facilitator client |
+| [`x402-core`](https://crates.io/crates/x402-core)       | Core traits, types, and transport mechanisms for the X402 protocol         |
 | [`x402-paywall`](https://crates.io/crates/x402-paywall) | Framework-agnostic HTTP paywall middleware                                 |
 
 ## 📚 Developer Docs
@@ -50,11 +51,11 @@ Minimize runtime errors through compile-time guarantees while maintaining the fl
 
 ### Using `x402-paywall` with Axum
 
-The `x402-paywall` crate provides a composable `PayWall` that handles the complete X402 payment flow. Run the example:
+The `x402-paywall` crate (re-exported via `x402-kit`) provides a composable `PayWall` that handles the complete X402 payment flow. Run the example:
 
 ```bash
 FACILITATOR_URL=https://your-facilitator.example \
-  cargo run -p x402-paywall --example axum_seller
+  cargo run -p x402-kit --example axum_seller
 ```
 
 #### Standard Payment Flow
@@ -69,9 +70,9 @@ use x402_kit::{
     core::Resource,
     facilitator_client::FacilitatorClient,
     networks::evm::assets::UsdcBaseSepolia,
+    paywall::paywall::PayWall,
     schemes::exact_evm::ExactEvm,
 };
-use x402_paywall::paywall::PayWall;
 
 async fn paywall_middleware(State(state): State<AppState>, req: Request, next: Next) -> Response {
     let paywall = PayWall::builder()
@@ -154,7 +155,7 @@ The `PayWall` injects `PaymentState` into request extensions:
 
 ```rust
 use axum::{Extension, Json};
-use x402_paywall::processor::PaymentState;
+use x402_kit::paywall::processor::PaymentState;
 
 async fn handler(Extension(payment_state): Extension<PaymentState>) -> Json<Value> {
     Json(json!({
