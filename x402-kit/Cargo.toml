@@ -17,7 +17,7 @@ axum = ["paywall", "x402-paywall/axum"]
 
 [dependencies]
 # === Core Deps ===
-x402-core = { path = "../x402-core" }
+x402-core = { version = "2.2", path = "../x402-core" }
 hex = { version = "0.4" }
 alloy-primitives = { version = "1.4" }
 bon = { version = "3.8" }
