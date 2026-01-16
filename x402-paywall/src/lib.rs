@@ -91,3 +91,37 @@ impl<R> HttpResponse for http::Response<R> {
         Ok(())
     }
 }
+
+#[cfg(feature = "actix-web")]
+mod actix_impl {
+    use actix_web::HttpMessage;
+
+    use super::*;
+    impl HttpRequest for actix_web::HttpRequest {
+        fn get_header(&self, name: &str) -> Option<&[u8]> {
+            self.headers().get(name).map(|v| v.as_bytes())
+        }
+
+        fn insert_extension<T: Clone + Send + Sync + 'static>(&mut self, ext: T) -> Option<T> {
+            self.extensions_mut().insert(ext)
+        }
+    }
+
+    impl HttpResponse for actix_web::HttpResponse {
+        fn is_success(&self) -> bool {
+            self.status().is_success()
+        }
+
+        fn insert_header(
+            &mut self,
+            name: &'static str,
+            value: &[u8],
+        ) -> Result<(), InvalidHeaderValue> {
+            let value = actix_web::http::header::HeaderValue::from_bytes(value)
+                .map_err(|_| InvalidHeaderValue)?;
+            let name = actix_web::http::header::HeaderName::from_static(name);
+            self.headers_mut().insert(name, value);
+            Ok(())
+        }
+    }
+}
