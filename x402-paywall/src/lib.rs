@@ -40,6 +40,54 @@
 //! - `400 Bad Request`: Invalid payment payload or unsupported requirements.
 //! - `500 Internal Server Error`: Facilitator communication failures.
 
+use std::fmt::Display;
+
 pub mod errors;
 pub mod paywall;
 pub mod processor;
+
+pub trait HttpRequest {
+    fn get_header(&self, name: &str) -> Option<&[u8]>;
+    fn insert_extension<T: Clone + Send + Sync + 'static>(&mut self, ext: T) -> Option<T>;
+}
+
+pub trait HttpResponse {
+    fn is_success(&self) -> bool;
+    fn insert_header(&mut self, name: &'static str, value: &[u8])
+    -> Result<(), InvalidHeaderValue>;
+}
+
+impl<R> HttpRequest for http::Request<R> {
+    fn get_header(&self, name: &str) -> Option<&[u8]> {
+        self.headers().get(name).map(|v| v.as_bytes())
+    }
+
+    fn insert_extension<T: Clone + Send + Sync + 'static>(&mut self, ext: T) -> Option<T> {
+        self.extensions_mut().insert(ext)
+    }
+}
+
+#[derive(Debug)]
+pub struct InvalidHeaderValue;
+
+impl Display for InvalidHeaderValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("invalid header value")
+    }
+}
+
+impl<R> HttpResponse for http::Response<R> {
+    fn is_success(&self) -> bool {
+        self.status().is_success()
+    }
+
+    fn insert_header(
+        &mut self,
+        name: &'static str,
+        value: &[u8],
+    ) -> Result<(), InvalidHeaderValue> {
+        let value = http::HeaderValue::from_bytes(value).map_err(|_| InvalidHeaderValue)?;
+        self.headers_mut().insert(name, value);
+        Ok(())
+    }
+}
