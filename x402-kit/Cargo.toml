@@ -9,7 +9,7 @@ description = "(V2 Supported) A fully modular SDK for building complex X402 paym
 
 [features]
 default = ["facilitator-client", "evm-signer", "svm-signer", "axum", "actix-web"]
-facilitator-client = ["dep:reqwest", "dep:http"]
+facilitator-client = ["dep:http", "dep:reqwest-middleware"]
 evm-signer = ["dep:alloy-core", "dep:alloy-signer", "dep:rand"]
 svm-signer = ["dep:bincode"]
 paywall = ["dep:x402-paywall"]
@@ -30,7 +30,7 @@ solana-pubkey = { version = "4.0" }
 solana-signature = { version = "3.1" }
 
 # === Feature "facilitator-client" ===
-reqwest = { version = "0.12", optional = true, features = ["json"] }
+reqwest-middleware = { version = "0.5.0", optional = true, features = ["json"] }
 
 # === Feature "evm-signer" ===
 alloy-core = { version = "1.4", features = ["sol-types"], optional = true }

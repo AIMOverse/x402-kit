@@ -29,7 +29,7 @@ where
     SRes: IntoSettleResponse + for<'de> Deserialize<'de>,
 {
     pub base_url: Url,
-    pub client: reqwest::Client,
+    pub client: reqwest_middleware::ClientWithMiddleware,
     pub supported_headers: HeaderMap,
     pub verify_headers: HeaderMap,
     pub settle_headers: HeaderMap,
@@ -130,7 +130,7 @@ where
     pub fn new_from_url(base_url: Url) -> Self {
         FacilitatorClient {
             base_url,
-            client: reqwest::Client::new(),
+            client: Default::default(),
             supported_headers: HeaderMap::new(),
             verify_headers: HeaderMap::new(),
             settle_headers: HeaderMap::new(),
@@ -235,7 +235,9 @@ pub enum FacilitatorClientError {
     #[error("URL parse error: {0}")]
     UrlParseError(#[from] url::ParseError),
     #[error("HTTP request error: {0}")]
-    HttpRequestError(#[from] reqwest::Error),
+    HttpRequestError(#[from] reqwest_middleware::reqwest::Error),
+    #[error("HTTP request error: {0}")]
+    HttpRequestMiddlewareError(#[from] reqwest_middleware::Error),
     #[error("JSON Serialization/Deserialization error: {0}")]
     SerdeJsonError(#[from] serde_json::Error),
 }
