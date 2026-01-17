@@ -30,7 +30,7 @@ solana-pubkey = { version = "4.0" }
 solana-signature = { version = "3.1" }
 
 # === Feature "facilitator-client" ===
-reqwest-middleware = { version = "0.5.0", optional = true, features = ["json"] }
+reqwest-middleware = { version = "0.4.2", optional = true, features = ["json"] }
 
 # === Feature "evm-signer" ===
 alloy-core = { version = "1.4", features = ["sol-types"], optional = true }
