@@ -107,7 +107,7 @@ mod actix_impl {
         }
     }
 
-    impl HttpResponse for actix_web::HttpResponse {
+    impl<B> HttpResponse for actix_web::HttpResponse<B> {
         fn is_success(&self) -> bool {
             self.status().is_success()
         }
