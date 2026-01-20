@@ -21,6 +21,12 @@ pub struct ErrorResponse {
     pub body: Box<PaymentRequired>,
 }
 
+impl Display for ErrorResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("payment required")
+    }
+}
+
 impl ErrorResponse {
     /// Payment needed to access resource
     pub fn payment_required(
@@ -163,5 +169,32 @@ impl axum::response::IntoResponse for ErrorResponse {
             response.headers_mut().insert(name, val);
         }
         response
+    }
+}
+
+#[cfg(feature = "actix-web")]
+impl ErrorResponse {
+    fn actix_header(&self) -> (&'static str, &str) {
+        match &self.header {
+            ErrorResponseHeader::PaymentRequired(base64_encoded_header) => {
+                ("payment-required", &base64_encoded_header.0)
+            }
+            ErrorResponseHeader::PaymentResponse(base64_encoded_header) => {
+                ("payment-required", &base64_encoded_header.0)
+            }
+        }
+    }
+}
+
+#[cfg(feature = "actix-web")]
+impl actix_web::ResponseError for ErrorResponse {
+    fn status_code(&self) -> actix_web::http::StatusCode {
+        actix_web::http::StatusCode::from_u16(self.status.as_u16()).unwrap()
+    }
+
+    fn error_response(&self) -> actix_web::HttpResponse<actix_web::body::BoxBody> {
+        actix_web::HttpResponseBuilder::new(self.status_code())
+            .insert_header(self.actix_header())
+            .json(&self.body)
     }
 }
