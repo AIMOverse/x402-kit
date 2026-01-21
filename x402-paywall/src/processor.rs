@@ -231,7 +231,7 @@ impl<'pw, F: Facilitator, Res: HttpResponse> ResponseProcessor<'pw, F, Res> {
                 .ok();
             if let Some(header) = header {
                 response
-                    .insert_header("PAYMENT-RESPONSE", header.0.as_bytes())
+                    .insert_header("payment-response", header.0.as_bytes())
                     .inspect_err(|err| {
                         #[cfg(feature = "tracing")]
                         tracing::warn!("Failed to encode PAYMENT-RESPONSE header: {err}; skipping")

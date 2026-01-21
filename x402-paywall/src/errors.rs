@@ -180,7 +180,7 @@ impl ErrorResponse {
                 ("payment-required", &base64_encoded_header.0)
             }
             ErrorResponseHeader::PaymentResponse(base64_encoded_header) => {
-                ("payment-required", &base64_encoded_header.0)
+                ("payment-response", &base64_encoded_header.0)
             }
         }
     }
