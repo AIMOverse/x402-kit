@@ -1,6 +1,6 @@
 [package]
 name = "x402-paywall"
-version = "2.2.1"
+version = "2.2.2"
 edition = "2024"
 repository = "https://github.com/AIMOverse/x402-kit"
 authors = ["Archer <archer@aimo.network>"]
@@ -13,7 +13,7 @@ tracing = ["dep:tracing"]
 axum = ["dep:axum"]
 
 [dependencies]
-x402-core = { version = "2.2.1", path = "../x402-core" }
+x402-core = { version = "2.2.2", path = "../x402-core" }
 http = { version = "1.4" }
 bon = { version = "3.8" }
 tracing = { version = "0.1", optional = true }
