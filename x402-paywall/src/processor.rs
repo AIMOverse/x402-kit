@@ -1,4 +1,3 @@
-use http::{HeaderValue, Request, Response};
 use x402_core::{
     facilitator::{
         Facilitator, PaymentRequest, SettleResult, SettleSuccess, VerifyResult, VerifyValid,
@@ -7,7 +6,7 @@ use x402_core::{
     types::{Base64EncodedHeader, Extension, Record},
 };
 
-use crate::{errors::ErrorResponse, paywall::PayWall};
+use crate::{HttpRequest, HttpResponse, errors::ErrorResponse, paywall::PayWall};
 
 /// The state of a payment processed by the paywall when accessing the resource handler.
 ///
@@ -45,15 +44,15 @@ pub struct PaymentState {
 /// Payment processing state before running the resource handler.
 ///
 /// See [`PayWall`] for usage in the full payment processing flow.
-pub struct RequestProcessor<'pw, F: Facilitator, Req> {
+pub struct RequestProcessor<'pw, F: Facilitator, Req: HttpRequest> {
     pub paywall: &'pw PayWall<F>,
-    pub request: Request<Req>,
+    pub request: Req,
     pub payload: PaymentPayload,
     pub selected: PaymentRequirements,
     pub payment_state: PaymentState,
 }
 
-impl<'pw, F: Facilitator, Req> RequestProcessor<'pw, F, Req> {
+impl<'pw, F: Facilitator, Req: HttpRequest> RequestProcessor<'pw, F, Req> {
     /// Verify the payment with the facilitator.
     ///
     /// `self.payment_state.verified` will be populated on success.
@@ -131,12 +130,10 @@ impl<'pw, F: Facilitator, Req> RequestProcessor<'pw, F, Req> {
         handler: Fun,
     ) -> Result<ResponseProcessor<'pw, F, Res>, ErrorResponse>
     where
-        Fun: FnOnce(Request<Req>) -> Fut,
-        Fut: Future<Output = Response<Res>>,
+        Fun: FnOnce(Req) -> Fut,
+        Fut: Future<Output = Res>,
     {
-        self.request
-            .extensions_mut()
-            .insert(self.payment_state.clone());
+        self.request.insert_extension(self.payment_state.clone());
 
         let response = handler(self.request).await;
         Ok(ResponseProcessor {
@@ -152,13 +149,13 @@ impl<'pw, F: Facilitator, Req> RequestProcessor<'pw, F, Req> {
 /// Payment processing state after running the resource handler.
 pub struct ResponseProcessor<'pw, F: Facilitator, Res> {
     pub paywall: &'pw PayWall<F>,
-    pub response: Response<Res>,
+    pub response: Res,
     pub payload: PaymentPayload,
     pub selected: PaymentRequirements,
     pub payment_state: PaymentState,
 }
 
-impl<'pw, F: Facilitator, Res> ResponseProcessor<'pw, F, Res> {
+impl<'pw, F: Facilitator, Res: HttpResponse> ResponseProcessor<'pw, F, Res> {
     /// Settle the payment with the facilitator after running the resource handler.
     ///
     /// After settlement, `self.payment_state.settled` will be populated on success.
@@ -199,10 +196,7 @@ impl<'pw, F: Facilitator, Res> ResponseProcessor<'pw, F, Res> {
     /// Conditionally settle the payment based on the provided prediction function.
     ///
     /// After settlement, `self.payment_state.settled` will be populated on success.
-    pub async fn settle_on(
-        self,
-        predicate: impl Fn(&Response<Res>) -> bool,
-    ) -> Result<Self, ErrorResponse> {
+    pub async fn settle_on(self, predicate: impl Fn(&Res) -> bool) -> Result<Self, ErrorResponse> {
         if predicate(&self.response) {
             self.settle().await
         } else {
@@ -214,11 +208,11 @@ impl<'pw, F: Facilitator, Res> ResponseProcessor<'pw, F, Res> {
     ///
     /// After settlement, `self.payment_state.settled` will be populated on success.
     pub async fn settle_on_success(self) -> Result<Self, ErrorResponse> {
-        self.settle_on(|resp| resp.status().is_success()).await
+        self.settle_on(|resp| resp.is_success()).await
     }
 
     /// Generate the final response, including the `PAYMENT-RESPONSE` header if settled.
-    pub fn response(self) -> Response<Res> {
+    pub fn response(self) -> Res {
         let mut response = self.response;
 
         if let Some(settled) = &self.payment_state.settled {
@@ -234,20 +228,15 @@ impl<'pw, F: Facilitator, Res> ResponseProcessor<'pw, F, Res> {
                     #[cfg(feature = "tracing")]
                     tracing::warn!("Failed to encode PAYMENT-RESPONSE header: {err}; skipping")
                 })
-                .ok()
-                .and_then(|h| {
-                    HeaderValue::from_str(&h.0)
-                        .inspect_err(|err| {
-                            #[cfg(feature = "tracing")]
-                            tracing::warn!(
-                                "Failed to encode PAYMENT-RESPONSE header: {err}; skipping"
-                            )
-                        })
-                        .ok()
-                });
-
+                .ok();
             if let Some(header) = header {
-                response.headers_mut().insert("PAYMENT-RESPONSE", header);
+                response
+                    .insert_header("payment-response", header.0.as_bytes())
+                    .inspect_err(|err| {
+                        #[cfg(feature = "tracing")]
+                        tracing::warn!("Failed to encode PAYMENT-RESPONSE header: {err}; skipping")
+                    })
+                    .ok();
             }
         }
 
