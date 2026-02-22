@@ -239,10 +239,10 @@ pub mod assets {
                 $network_struct,
                 $addr,
                 6,
-                "USDC",
+                "USD Coin",
                 "USDC",
                 Some(Eip712Domain {
-                    name: "USDC",
+                    name: "USD Coin",
                     version: "2",
                 })
             );
