@@ -151,7 +151,7 @@ async fn multi_payments_paywall(
         )
         .resource(
             Resource::builder()
-                .url(url!("https://example.com/resource/standard"))
+                .url(url!("https://example.com/resource/multi_payments"))
                 .description("X402 payment protected resource")
                 .mime_type("application/json")
                 .build(),
