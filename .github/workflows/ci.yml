@@ -60,6 +60,7 @@ jobs:
           - "" # no extra features
           - "tracing"
           - "axum"
+          - "actix-web"
           - "all" # marker for all features
     steps:
       - uses: actions/checkout@v6
