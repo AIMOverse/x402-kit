@@ -1,8 +1,9 @@
 use actix_web::{
+    App, Error, HttpMessage, HttpResponse, HttpServer,
     body::MessageBody,
     dev::{ServiceRequest, ServiceResponse},
     middleware::{self, Next},
-    web, App, Error, HttpMessage, HttpResponse, HttpServer,
+    web,
 };
 use alloy::primitives::address;
 use serde_json::json;
