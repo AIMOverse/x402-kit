@@ -5,7 +5,6 @@
 use std::fmt::Display;
 
 use bon::Builder;
-use http::{Request, Response};
 use x402_core::{
     core::Resource,
     facilitator::{Facilitator, SupportedResponse},
@@ -14,6 +13,7 @@ use x402_core::{
 };
 
 use crate::{
+    HttpRequest, HttpResponse,
     errors::ErrorResponse,
     processor::{PaymentState, RequestProcessor},
 };
@@ -77,16 +77,15 @@ impl<F: Facilitator> PayWall<F> {
     /// Process an incoming request and extract payment information.
     ///
     /// Returns a [`RequestProcessor`] on success for further processing.
-    pub fn process_request<'pw, Req>(
+    pub fn process_request<'pw, Req: HttpRequest>(
         &'pw self,
-        request: Request<Req>,
+        request: Req,
     ) -> Result<RequestProcessor<'pw, F, Req>, ErrorResponse> {
         let payment_signature = request
-            .headers()
-            .get("PAYMENT-SIGNATURE")
+            .get_header("PAYMENT-SIGNATURE")
             .ok_or_else(|| self.payment_required())
             .and_then(|h| {
-                h.to_str().map_err(|err| {
+                str::from_utf8(h).map_err(|err| {
                     self.invalid_payment(format!(
                         "Failed to decode PAYMENT-SIGNATURE header: {err}"
                     ))
@@ -128,12 +127,14 @@ impl<F: Facilitator> PayWall<F> {
     /// **verify** the payment, **run** the provided resource handler, and **settle** the payment on success.
     pub async fn handle_payment<Fun, Fut, Req, Res>(
         self,
-        request: Request<Req>,
+        request: Req,
         handler: Fun,
-    ) -> Result<Response<Res>, ErrorResponse>
+    ) -> Result<Res, ErrorResponse>
     where
-        Fun: FnOnce(Request<Req>) -> Fut,
-        Fut: Future<Output = Response<Res>>,
+        Fun: FnOnce(Req) -> Fut,
+        Fut: Future<Output = Res>,
+        Req: HttpRequest,
+        Res: HttpResponse,
     {
         let response = self
             .update_accepts()
