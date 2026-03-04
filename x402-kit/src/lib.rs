@@ -463,6 +463,11 @@ pub mod paywall {
     pub use x402_paywall::*;
 }
 
+/// X402 protocol extension implementations.
+pub mod extensions {
+    pub use x402_extensions::*;
+}
+
 /// Facilitator client utilities.
 #[cfg(feature = "facilitator-client")]
 pub mod facilitator_client;
