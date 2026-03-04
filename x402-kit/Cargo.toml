@@ -19,6 +19,7 @@ actix-web = ["paywall", "x402-paywall/actix-web"]
 [dependencies]
 # === Core Deps ===
 x402-core = { version = "2.3.0", path = "../x402-core" }
+x402-extensions = { version = "0.2.0", path = "../x402-extensions" }
 hex = { version = "0.4" }
 alloy-primitives = { version = "1.4" }
 bon = { version = "3.8" }
