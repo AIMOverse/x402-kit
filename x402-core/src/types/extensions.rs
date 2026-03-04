@@ -117,8 +117,12 @@ impl<T: ExtensionInfo> Extension<T> {
         (
             T::ID.to_string(),
             Extension {
-                info: serde_json::to_value(&self.info)
-                    .expect("ExtensionInfo types must be serializable"),
+                info: serde_json::to_value(&self.info).unwrap_or_else(|e| {
+                    panic!(
+                        "Failed to serialize extension '{}' info: {e}",
+                        T::ID
+                    )
+                }),
                 schema: self.schema,
                 extra: self.extra,
             },
@@ -196,9 +200,9 @@ impl<T: Serialize> Serialize for Extension<T> {
 }
 
 // Custom Deserialize: extract info and schema, collect remaining into extra
-impl<'de, T: Deserialize<'de>> Deserialize<'de> for Extension<T>
+impl<'de, T> Deserialize<'de> for Extension<T>
 where
-    T: From<AnyJson>,
+    T: serde::de::DeserializeOwned,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -211,9 +215,10 @@ where
         let schema = map
             .remove("schema")
             .ok_or_else(|| serde::de::Error::missing_field("schema"))?;
+        let info: T = serde_json::from_value(info_val).map_err(serde::de::Error::custom)?;
 
         Ok(Extension {
-            info: T::from(info_val),
+            info,
             schema,
             extra: map,
         })
